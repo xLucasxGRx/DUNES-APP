@@ -69,12 +69,12 @@ console.log('--- Iniciando Tests Matemáticos de DUNES PARFUMS ---');
   console.log('✔ Caso 2 (Prompt Maestro) superado con éxito.');
 }
 
-// Caso 3: Cantidades múltiples y precio venta 0 (evitar división por cero)
+// Caso 3: Cantidades múltiples con nueva fórmula Flete = (Peso × Cantidad) × Costo Envio
 {
   const inputMultiples = {
     cantidad: 3,
     precioUSA: 50.00,
-    peso: 1.80,
+    peso: 0.60,
     envioKg: 9.50,
     reempaque: 2.00,
     tc: 3.40,
@@ -86,7 +86,7 @@ console.log('--- Iniciando Tests Matemáticos de DUNES PARFUMS ---');
 
   // Total USA = 50 * 3 = 150
   assert.strictEqual(res.totalUSA, 150.00);
-  // Flete = 1.8 * 9.50 = 17.10
+  // Flete = (0.60 * 3) * 9.50 = 1.80 * 9.50 = 17.10
   assert.strictEqual(res.flete, 17.10);
   // Total Envio = 17.10 + 2.00 = 19.10
   assert.strictEqual(res.totalEnvio, 19.10);
@@ -101,11 +101,28 @@ console.log('--- Iniciando Tests Matemáticos de DUNES PARFUMS ---');
   console.log('✔ Caso 3 (Múltiples y Venta 0) superado con éxito.');
 }
 
-// Caso 4: Caso de prueba del nuevo flujo de pruebas sin navegador
+// Caso 4: Ejemplos específicos de validación de FLETE
 {
-  const inputPromptNuevo = {
+  // Ejemplo 1: Cantidad 1, Peso 0.6, EnvioKg 9.50 -> 5.70 USD
+  const ej1 = calculateDunesQuotation({ cantidad: 1, peso: 0.6, envioKg: 9.50 });
+  assert.strictEqual(ej1.flete, 5.70, '(0.6 × 1) × 9.50 debe ser 5.70 USD');
+
+  // Ejemplo 2: Cantidad 2, Peso 0.6, EnvioKg 9.50 -> 11.40 USD
+  const ej2 = calculateDunesQuotation({ cantidad: 2, peso: 0.6, envioKg: 9.50 });
+  assert.strictEqual(ej2.flete, 11.40, '(0.6 × 2) × 9.50 debe ser 11.40 USD');
+
+  // Ejemplo 3: Cantidad 5, Peso 0.6, EnvioKg 9.50 -> 28.50 USD
+  const ej3 = calculateDunesQuotation({ cantidad: 5, peso: 0.6, envioKg: 9.50 });
+  assert.strictEqual(ej3.flete, 28.50, '(0.6 × 5) × 9.50 debe ser 28.50 USD');
+
+  console.log('✔ Caso 4 (Validación de Flete: 1, 2 y 5 unidades) superado con éxito.');
+}
+
+// Caso 5: Validación Automática solicitada en el prompt (Dior Sauvage 2 unidades)
+{
+  const inputDior2 = {
     producto: 'Dior Sauvage EDT 100ml',
-    cantidad: 1,
+    cantidad: 2,
     precioUSA: 19.95,
     peso: 0.6,
     envioKg: 9.50,
@@ -115,19 +132,21 @@ console.log('--- Iniciando Tests Matemáticos de DUNES PARFUMS ---');
     venta: 139.00
   };
 
-  const res = calculateDunesQuotation(inputPromptNuevo);
+  const res = calculateDunesQuotation(inputDior2);
 
-  console.log('Caso 4 (Validación Directa Solicitada):', res);
+  console.log('Caso 5 (Validación Dior Sauvage 2 unidades):', res);
 
-  assert.strictEqual(res.totalUSA, 19.95, 'Total USA debe ser 19.95 USD');
-  assert.strictEqual(res.flete, 5.70, 'Flete debe ser 0.6 * 9.50 = 5.70 USD');
-  assert.strictEqual(res.totalEnvio, 6.70, 'Total envío debe ser 5.70 + 1 = 6.70 USD');
-  assert.strictEqual(res.precioTotalUSD, 26.65, 'Total USD debe ser 19.95 + 6.70 = 26.65 USD');
-  assert.strictEqual(res.precioTotalSoles, 90.61, 'Costo Perú debe ser 26.65 * 3.40 = 90.61 S/');
-  assert.strictEqual(res.costoUnidad, 90.61, 'Costo unidad debe ser 90.61 S/');
-  assert.strictEqual(res.gananciaUnidad, 33.39, 'Ganancia unidad debe ser 139 - 90.61 - 15 = 33.39 S/');
-  assert.strictEqual(res.gananciaTotal, 33.39, 'Ganancia total debe ser 33.39 S/');
-  console.log('✔ Caso 4 (Validación Directa Solicitada) superado con éxito.');
+  assert.strictEqual(res.totalUSA, 39.90, 'Total USA debe ser 39.90 USD (19.95 × 2)');
+  assert.strictEqual(res.flete, 11.40, 'Flete debe ser 11.40 USD ((0.6 × 2) × 9.50)');
+  assert.strictEqual(res.reempaque, 1.00, 'Reempaque debe ser 1.00 USD');
+  assert.strictEqual(res.totalEnvio, 12.40, 'Total envío debe ser 12.40 USD (11.40 + 1.00)');
+  assert.strictEqual(res.precioTotalUSD, 52.30, 'Total USD debe ser 52.30 USD (39.90 + 12.40)');
+  assert.strictEqual(res.precioTotalSoles, 177.82, 'Costo Perú debe ser 177.82 S/ (52.30 × 3.40)');
+  assert.strictEqual(res.costoUnidad, 88.91, 'Costo unidad debe ser 88.91 S/ (177.82 ÷ 2)');
+  assert.strictEqual(res.gananciaUnidad, 35.09, 'Ganancia unidad debe ser 35.09 S/ (139 - 88.91 - 15)');
+  assert.strictEqual(res.gananciaTotal, 70.18, 'Ganancia total debe ser 70.18 S/ (35.09 × 2)');
+
+  console.log('✔ Caso 5 (Validación Automática solicitada) superado con éxito.');
 }
 
 console.log('--- TODOS LOS TESTS MATEMÁTICOS PASARON SATISFACTORIAMENTE ---');

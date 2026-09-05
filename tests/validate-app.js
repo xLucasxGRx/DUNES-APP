@@ -64,9 +64,9 @@ expectedIds.forEach((id) => {
   report(`Elemento HTML id="${id}" existe en index.html`, exists, 'ID no encontrado en el DOM');
 });
 
-// 3. Verificación de Fórmulas Financieras
+// 3. Verificación de Fórmulas Financieras (1 y 2 unidades)
 console.log('\n3. Verificando fórmulas financieras contra caso de prueba solicitado...');
-const casoPrueba = {
+const casoPrueba1 = {
   producto: 'Dior Sauvage EDT 100ml',
   cantidad: 1,
   precioUSA: 19.95,
@@ -78,15 +78,36 @@ const casoPrueba = {
   venta: 139.00
 };
 
-const res = calculateDunesQuotation(casoPrueba);
+const res1 = calculateDunesQuotation(casoPrueba1);
+report('Caso 1 ud - Total USA es $ 19.95', res1.totalUSA === 19.95, `Obtenido: ${res1.totalUSA}`);
+report('Caso 1 ud - Flete es $ 5.70', res1.flete === 5.70, `Obtenido: ${res1.flete}`);
+report('Caso 1 ud - Total envío es $ 6.70', res1.totalEnvio === 6.70, `Obtenido: ${res1.totalEnvio}`);
+report('Caso 1 ud - Total USD es $ 26.65', res1.precioTotalUSD === 26.65, `Obtenido: ${res1.precioTotalUSD}`);
+report('Caso 1 ud - Costo Perú es S/ 90.61', res1.precioTotalSoles === 90.61, `Obtenido: ${res1.precioTotalSoles}`);
 
-report('Total USA es exactamente $ 19.95', res.totalUSA === 19.95, `Obtenido: ${res.totalUSA}`);
-report('Flete es exactamente $ 5.70', res.flete === 5.70, `Obtenido: ${res.flete}`);
-report('Total envío es exactamente $ 6.70', res.totalEnvio === 6.70, `Obtenido: ${res.totalEnvio}`);
-report('Total USD es exactamente $ 26.65', res.precioTotalUSD === 26.65, `Obtenido: ${res.precioTotalUSD}`);
-report('Costo Perú es exactamente S/ 90.61', res.precioTotalSoles === 90.61, `Obtenido: ${res.precioTotalSoles}`);
-report('Costo Unidad es exactamente S/ 90.61', res.costoUnidad === 90.61, `Obtenido: ${res.costoUnidad}`);
-report('Ganancia por unidad es exactamente S/ 33.39', res.gananciaUnidad === 33.39, `Obtenido: ${res.gananciaUnidad}`);
+// Validación Solicitada: 2 unidades
+const casoPrueba2 = {
+  producto: 'Dior Sauvage EDT 100ml',
+  cantidad: 2,
+  precioUSA: 19.95,
+  peso: 0.6,
+  envioKg: 9.50,
+  reempaque: 1.00,
+  tc: 3.40,
+  extras: 15.00,
+  venta: 139.00
+};
+
+const res2 = calculateDunesQuotation(casoPrueba2);
+report('Caso 2 uds - Total USA es $ 39.90', res2.totalUSA === 39.90, `Obtenido: ${res2.totalUSA}`);
+report('Caso 2 uds - Flete es $ 11.40 ((0.6 × 2) × 9.50)', res2.flete === 11.40, `Obtenido: ${res2.flete}`);
+report('Caso 2 uds - Reempaque es $ 1.00', res2.reempaque === 1.00, `Obtenido: ${res2.reempaque}`);
+report('Caso 2 uds - Total envío es $ 12.40', res2.totalEnvio === 12.40, `Obtenido: ${res2.totalEnvio}`);
+report('Caso 2 uds - Total USD es $ 52.30', res2.precioTotalUSD === 52.30, `Obtenido: ${res2.precioTotalUSD}`);
+report('Caso 2 uds - Costo Perú es S/ 177.82', res2.precioTotalSoles === 177.82, `Obtenido: ${res2.precioTotalSoles}`);
+report('Caso 2 uds - Costo Unidad es S/ 88.91', res2.costoUnidad === 88.91, `Obtenido: ${res2.costoUnidad}`);
+report('Caso 2 uds - Ganancia por unidad es S/ 35.09', res2.gananciaUnidad === 35.09, `Obtenido: ${res2.gananciaUnidad}`);
+report('Caso 2 uds - Ganancia total es S/ 70.18', res2.gananciaTotal === 70.18, `Obtenido: ${res2.gananciaTotal}`);
 
 // 4. Verificación de Archivos y Rutas PWA
 console.log('\n4. Verificando archivos de despliegue PWA y GitHub Pages...');

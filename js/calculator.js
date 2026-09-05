@@ -33,8 +33,8 @@ function calculateDunesQuotation(params) {
   // 1. Total Costo USA = Precio USA * Cantidad
   const totalUSA = precioUSA * cantidad;
 
-  // 2. Flete = Peso KG * Costo Envío KG
-  const flete = peso * envioKg;
+  // 2. Flete = (Peso por Unidad KG * Cantidad) * Costo Envío KG
+  const flete = (peso * cantidad) * envioKg;
 
   // 3. Total Gasto Envío = Flete + Reempaque
   const totalEnvio = flete + reempaque;

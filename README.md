@@ -23,7 +23,7 @@ Aplicación móvil web progresiva (**PWA**) diseñada para dueños de tiendas e 
 | Métrica                   | Fórmula                                           |
 | :------------------------ | :------------------------------------------------ |
 | **Total Costo USA**       | `Precio USA × Cantidad`                           |
-| **Flete Aéreo**           | `Peso KG × Costo Envío por KG`                    |
+| **Flete Aéreo**           | `(Peso KG × Cantidad) × Costo Envío por KG`       |
 | **Total Gasto Envío**     | `Flete + Reempaque`                               |
 | **Precio Total USD**      | `Total Costo USA + Total Gasto Envío`             |
 | **Precio Total Soles**    | `Precio Total USD × Tipo de Cambio`               |
@@ -103,7 +103,7 @@ DUNES-APP
 
 ## 🧪 Pruebas Unitarias
 
-Paraa verificar la exactitud de las fórmulas matemáticas:
+Para verificar la exactitud de las fórmulas matemáticas:
 
 ```bash
 node tests/calculator.test.js

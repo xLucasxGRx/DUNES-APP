@@ -552,7 +552,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <td>${formatUSD(item.envioKg)}</td>
           </tr>
           <tr>
-            <td>Flete aéreo (Peso × Tarifa):</td>
+            <td>Flete aéreo (${(item.peso * item.cantidad).toFixed(2)} KG total × Tarifa):</td>
             <td>${formatUSD(item.flete)}</td>
           </tr>
           <tr>
