@@ -25,7 +25,6 @@ function calculateDunesQuotation(params) {
   const precioUSA = parseFloat(params.precioUSA) || 0;
   const peso = parseFloat(params.peso) || 0;
   const envioKg = parseFloat(params.envioKg) || 0;
-  const reempaque = parseFloat(params.reempaque) || 0;
   const tc = parseFloat(params.tc) || 0;
   const extras = parseFloat(params.extras) || 0;
   const venta = parseFloat(params.venta) || 0;
@@ -36,7 +35,15 @@ function calculateDunesQuotation(params) {
   // 2. Flete = (Peso por Unidad KG * Cantidad) * Costo Envío KG
   const flete = (peso * cantidad) * envioKg;
 
-  // 3. Total Gasto Envío = Flete + Reempaque
+  // 3. Reempaque: valor total directo o cálculo dinámico (Cantidad × Costo Reempaque por Unidad)
+  let reempaque = 0;
+  if (params.reempaque !== undefined && params.reempaque !== null && params.reempaque !== '') {
+    reempaque = parseFloat(params.reempaque) || 0;
+  } else if (params.costoReempaqueUnidad !== undefined) {
+    reempaque = cantidad * (parseFloat(params.costoReempaqueUnidad) || 0);
+  }
+
+  // 4. Total Gasto Envío = Flete + Reempaque
   const totalEnvio = flete + reempaque;
 
   // 4. Precio Total USD = Total USA + Total Gasto Envío

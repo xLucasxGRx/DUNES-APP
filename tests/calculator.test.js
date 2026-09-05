@@ -149,5 +149,73 @@ console.log('--- Iniciando Tests Matemáticos de DUNES PARFUMS ---');
   console.log('✔ Caso 5 (Validación Automática solicitada) superado con éxito.');
 }
 
+// Caso 6: Validación de Sistema Inteligente de Reempaque Dinámico (Base 1.00 USD/ud)
+{
+  const costoBaseUnidad = 1.00;
+
+  // 1 perfume -> $1.00
+  const r1 = calculateDunesQuotation({ cantidad: 1, costoReempaqueUnidad: costoBaseUnidad });
+  assert.strictEqual(r1.reempaque, 1.00, 'Reempaque para 1 perfume debe ser 1.00 USD');
+
+  // 2 perfumes -> $2.00
+  const r2 = calculateDunesQuotation({ cantidad: 2, costoReempaqueUnidad: costoBaseUnidad });
+  assert.strictEqual(r2.reempaque, 2.00, 'Reempaque para 2 perfumes debe ser 2.00 USD');
+
+  // 3 perfumes -> $3.00
+  const r3 = calculateDunesQuotation({ cantidad: 3, costoReempaqueUnidad: costoBaseUnidad });
+  assert.strictEqual(r3.reempaque, 3.00, 'Reempaque para 3 perfumes debe ser 3.00 USD');
+
+  // 4 perfumes -> $4.00
+  const r4 = calculateDunesQuotation({ cantidad: 4, costoReempaqueUnidad: costoBaseUnidad });
+  assert.strictEqual(r4.reempaque, 4.00, 'Reempaque para 4 perfumes debe ser 4.00 USD');
+
+  console.log('✔ Caso 6 (Reempaque Dinámico 1, 2, 3, 4 perfumes a $1.00/ud) superado con éxito.');
+}
+
+// Caso 7: Validación de Cambio de Tarifa de Courier en Configuración (Base 1.25 USD/ud)
+{
+  const nuevaTarifaUnidad = 1.25;
+
+  // 1 perfume -> $1.25
+  const r1 = calculateDunesQuotation({ cantidad: 1, costoReempaqueUnidad: nuevaTarifaUnidad });
+  assert.strictEqual(r1.reempaque, 1.25, 'Reempaque para 1 perfume con tarifa 1.25 debe ser 1.25 USD');
+
+  // 4 perfumes -> $5.00
+  const r4 = calculateDunesQuotation({ cantidad: 4, costoReempaqueUnidad: nuevaTarifaUnidad });
+  assert.strictEqual(r4.reempaque, 5.00, 'Reempaque para 4 perfumes con tarifa 1.25 debe ser 5.00 USD');
+
+  console.log('✔ Caso 7 (Cambio de tarifa courier a $1.25/ud: 1 ud -> $1.25, 4 uds -> $5.00) superado con éxito.');
+}
+
+// Caso 8: Validación de Modificación Manual de Reempaque
+// Ejemplo del prompt: App calcula auto $3.00 (3 uds × $1.00), pero usuario edita a $5.00
+{
+  const inputManual = {
+    cantidad: 3,
+    precioUSA: 30.00,
+    peso: 0.60,
+    envioKg: 9.50,
+    reempaque: 5.00, // Modificado manualmente por el usuario
+    tc: 3.40,
+    extras: 15.00,
+    venta: 180.00
+  };
+
+  const res = calculateDunesQuotation(inputManual);
+
+  assert.strictEqual(res.reempaque, 5.00, 'Reempaque manual de 5.00 debe respetarse exactamente');
+  // Flete = (0.6 * 3) * 9.50 = 17.10
+  assert.strictEqual(res.flete, 17.10, 'Flete debe ser 17.10');
+  // Total Envio = 17.10 + 5.00 = 22.10
+  assert.strictEqual(res.totalEnvio, 22.10, 'Total envío debe usar el reempaque manual (17.10 + 5.00 = 22.10)');
+  // Total USA = 30 * 3 = 90
+  assert.strictEqual(res.totalUSA, 90.00, 'Total USA debe ser 90.00');
+  // Total USD = 90 + 22.10 = 112.10
+  assert.strictEqual(res.precioTotalUSD, 112.10, 'Total USD debe ser 112.10');
+
+  console.log('✔ Caso 8 (Modificación manual a $5.00 respetada en cálculos) superado con éxito.');
+}
+
 console.log('--- TODOS LOS TESTS MATEMÁTICOS PASARON SATISFACTORIAMENTE ---');
+
 

@@ -183,17 +183,27 @@ document.addEventListener('DOMContentLoaded', () => {
       ? { ...configBase, ...ultimosValores }
       : configBase;
 
+    const costoReempaqueUnidad = parseFloat(configBase.reempaque) || 1.00;
+
     inputs.cantidad.value = 1;
     inputs.peso.value = valoresEfectivos.peso;
     inputs.envioKg.value = valoresEfectivos.envioKg;
-    inputs.reempaque.value = valoresEfectivos.reempaque;
+    
+    // Si el usuario tenía un reempaque manual modificado guardado, lo respetamos;
+    // si no, se calcula dinámicamente cantidad (1) × costo unidad base.
+    if (ultimosValores && ultimosValores.reempaque !== undefined && ultimosValores.reempaque !== null) {
+      inputs.reempaque.value = parseFloat(ultimosValores.reempaque).toFixed(2);
+    } else {
+      inputs.reempaque.value = (1 * costoReempaqueUnidad).toFixed(2);
+    }
+
     inputs.tc.value = valoresEfectivos.tc;
     inputs.extras.value = valoresEfectivos.extras;
 
-    // Sincronizar también los inputs de la sección de Configuración Base
+    // Sincronizar inputs de la sección de Configuración Base (costo por unidad base)
     configInputs.peso.value = configBase.peso;
     configInputs.envioKg.value = configBase.envioKg;
-    configInputs.reempaque.value = configBase.reempaque;
+    configInputs.reempaque.value = costoReempaqueUnidad.toFixed(2);
     configInputs.tc.value = configBase.tc;
     configInputs.extras.value = configBase.extras;
   }
@@ -653,10 +663,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // Cargar la configuración base activa para este nuevo cálculo
     const configBase = obtenerConfigBase();
     const ultimos = obtenerUltimosValores() || configBase;
+    const costoReempaqueUnidad = parseFloat(configBase.reempaque) || 1.00;
 
     inputs.peso.value = ultimos.peso;
     inputs.envioKg.value = ultimos.envioKg;
-    inputs.reempaque.value = ultimos.reempaque;
+    // En nueva cotización (cantidad = 1), reempaque automático = 1 × costoReempaqueUnidad
+    inputs.reempaque.value = (1 * costoReempaqueUnidad).toFixed(2);
     inputs.tc.value = ultimos.tc;
     inputs.extras.value = ultimos.extras;
 
@@ -675,9 +687,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Cargar la configuración base
     const configBase = obtenerConfigBase();
+    const costoReempaqueUnidad = parseFloat(configBase.reempaque) || 1.00;
+
     inputs.peso.value = configBase.peso;
     inputs.envioKg.value = configBase.envioKg;
-    inputs.reempaque.value = configBase.reempaque;
+    inputs.reempaque.value = (1 * costoReempaqueUnidad).toFixed(2);
     inputs.tc.value = configBase.tc;
     inputs.extras.value = configBase.extras;
 
@@ -697,7 +711,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const configBase = obtenerConfigBase();
     configInputs.peso.value = configBase.peso;
     configInputs.envioKg.value = configBase.envioKg;
-    configInputs.reempaque.value = configBase.reempaque;
+    configInputs.reempaque.value = (parseFloat(configBase.reempaque) || 1.00).toFixed(2);
     configInputs.tc.value = configBase.tc;
     configInputs.extras.value = configBase.extras;
 
@@ -722,10 +736,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     localStorage.setItem(STORAGE_KEYS.BASE_CONFIG, JSON.stringify(nuevaConfig));
 
-    // Aplicar de inmediato al cotizador
+    // Aplicar de inmediato al cotizador:
+    // El reempaque total se actualiza automáticamente con la nueva tarifa por unidad
+    // REEMPAQUE TOTAL = CANTIDAD × COSTO DE REEMPAQUE POR UNIDAD
+    const cantActual = Math.max(1, parseInt(inputs.cantidad.value, 10) || 1);
     inputs.peso.value = nuevaConfig.peso;
     inputs.envioKg.value = nuevaConfig.envioKg;
-    inputs.reempaque.value = nuevaConfig.reempaque;
+    inputs.reempaque.value = (cantActual * nuevaConfig.reempaque).toFixed(2);
     inputs.tc.value = nuevaConfig.tc;
     inputs.extras.value = nuevaConfig.extras;
 
@@ -742,13 +759,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
       configInputs.peso.value = FACTORY_DEFAULTS.peso;
       configInputs.envioKg.value = FACTORY_DEFAULTS.envioKg;
-      configInputs.reempaque.value = FACTORY_DEFAULTS.reempaque;
+      configInputs.reempaque.value = FACTORY_DEFAULTS.reempaque.toFixed(2);
       configInputs.tc.value = FACTORY_DEFAULTS.tc;
       configInputs.extras.value = FACTORY_DEFAULTS.extras;
 
+      const cantActual = Math.max(1, parseInt(inputs.cantidad.value, 10) || 1);
       inputs.peso.value = FACTORY_DEFAULTS.peso;
       inputs.envioKg.value = FACTORY_DEFAULTS.envioKg;
-      inputs.reempaque.value = FACTORY_DEFAULTS.reempaque;
+      inputs.reempaque.value = (cantActual * FACTORY_DEFAULTS.reempaque).toFixed(2);
       inputs.tc.value = FACTORY_DEFAULTS.tc;
       inputs.extras.value = FACTORY_DEFAULTS.extras;
 
@@ -778,8 +796,21 @@ document.addEventListener('DOMContentLoaded', () => {
    */
 
   // Cálculo y sincronización en tiempo real
-  Object.values(inputs).forEach((input) => {
-    if (input) {
+  Object.entries(inputs).forEach(([key, input]) => {
+    if (!input) return;
+    if (key === 'cantidad') {
+      // Cuando el usuario modifica la cantidad:
+      // REEMPAQUE TOTAL = CANTIDAD × COSTO DE REEMPAQUE POR UNIDAD
+      const onCantidadChange = () => {
+        const cant = Math.max(1, parseInt(inputs.cantidad.value, 10) || 1);
+        const configBase = obtenerConfigBase();
+        const costoReempaqueUnidad = parseFloat(configBase.reempaque) || 1.00;
+        inputs.reempaque.value = (cant * costoReempaqueUnidad).toFixed(2);
+        ejecutarCalculo();
+      };
+      input.addEventListener('input', onCantidadChange);
+      input.addEventListener('change', onCantidadChange);
+    } else {
       input.addEventListener('input', ejecutarCalculo);
       input.addEventListener('change', ejecutarCalculo);
     }
