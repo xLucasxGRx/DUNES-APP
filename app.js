@@ -15,13 +15,13 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   // Valores de Fábrica Iniciales (DUNES PARFUMS)
+  // La capacidad de la caja es fija por negocio: siempre 4 perfumes
   const FACTORY_DEFAULTS = {
     cantidad: 1,
     peso: 0.6,
     envioKg: 9.50,
-    costoCaja: 4.00,    // Costo de reempaque por caja ($)
-    unidadesCaja: 4,     // Capacidad caja (unidades)
-    reempaque: 1.00,     // Costo calculado por perfume ($) (4.00 ÷ 4 = 1.00)
+    costoCaja: 4.00,    // Precio reempaque por caja (4 perfumes) ($)
+    reempaque: 1.00,    // Costo equivalente por perfume ($) (4.00 ÷ 4 = 1.00)
     tc: 3.40,
     extras: 15.00
   };
@@ -44,7 +44,6 @@ document.addEventListener('DOMContentLoaded', () => {
     peso: document.getElementById('cfg-peso'),
     envioKg: document.getElementById('cfg-envioKg'),
     costoCaja: document.getElementById('cfg-costoCaja'),
-    unidadesCaja: document.getElementById('cfg-unidadesCaja'),
     reempaque: document.getElementById('cfg-reempaque'),
     tc: document.getElementById('cfg-tc'),
     extras: document.getElementById('cfg-extras')
@@ -132,12 +131,12 @@ document.addEventListener('DOMContentLoaded', () => {
       const saved = localStorage.getItem(STORAGE_KEYS.BASE_CONFIG);
       if (saved) {
         const merged = { ...FACTORY_DEFAULTS, ...JSON.parse(saved) };
-        const costoCaja = parseFloat(merged.costoCaja) || FACTORY_DEFAULTS.costoCaja;
-        const unidadesCaja = Math.max(1, parseInt(merged.unidadesCaja, 10) || FACTORY_DEFAULTS.unidadesCaja);
+        const costoCaja = (merged.costoCaja !== undefined && merged.costoCaja !== null && merged.costoCaja !== '')
+          ? Math.max(0, parseFloat(merged.costoCaja) >= 0 ? parseFloat(merged.costoCaja) : 0)
+          : FACTORY_DEFAULTS.costoCaja;
         merged.costoCaja = costoCaja;
-        merged.unidadesCaja = unidadesCaja;
-        // Costo reempaque por perfume = Costo caja ÷ Unidades por caja
-        merged.reempaque = parseFloat((costoCaja / unidadesCaja).toFixed(2));
+        // Costo reempaque por perfume = Precio reempaque caja ÷ 4
+        merged.reempaque = parseFloat((costoCaja / 4).toFixed(2));
         return merged;
       }
     } catch (e) {
@@ -214,8 +213,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Sincronizar inputs de la sección de Configuración Base
     configInputs.peso.value = configBase.peso;
     configInputs.envioKg.value = configBase.envioKg;
-    if (configInputs.costoCaja) configInputs.costoCaja.value = (configBase.costoCaja || 4.00).toFixed(2);
-    if (configInputs.unidadesCaja) configInputs.unidadesCaja.value = configBase.unidadesCaja || 4;
+    if (configInputs.costoCaja) configInputs.costoCaja.value = (configBase.costoCaja !== undefined ? configBase.costoCaja : 4.00).toFixed(2);
     if (configInputs.reempaque) configInputs.reempaque.value = costoReempaquePorPerfume.toFixed(2);
     configInputs.tc.value = configBase.tc;
     configInputs.extras.value = configBase.extras;
@@ -724,12 +722,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const configBase = obtenerConfigBase();
     configInputs.peso.value = configBase.peso;
     configInputs.envioKg.value = configBase.envioKg;
-    if (configInputs.costoCaja) configInputs.costoCaja.value = (configBase.costoCaja || 4.00).toFixed(2);
-    if (configInputs.unidadesCaja) configInputs.unidadesCaja.value = configBase.unidadesCaja || 4;
+    const costoCaja = (configBase.costoCaja !== undefined ? configBase.costoCaja : 4.00);
+    if (configInputs.costoCaja) configInputs.costoCaja.value = parseFloat(costoCaja).toFixed(2);
     
-    const costoCaja = parseFloat(configBase.costoCaja) || 4.00;
-    const unidadesCaja = Math.max(1, parseInt(configBase.unidadesCaja, 10) || 4);
-    const costoPorPerfume = parseFloat((costoCaja / unidadesCaja).toFixed(2));
+    // Costo equivalente por perfume = Precio reempaque caja ÷ 4
+    const costoPorPerfume = parseFloat((costoCaja / 4).toFixed(2));
     if (configInputs.reempaque) configInputs.reempaque.value = costoPorPerfume.toFixed(2);
 
     configInputs.tc.value = configBase.tc;
@@ -746,25 +743,23 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function actualizarCostoCalculadoModal() {
-    const caja = parseFloat(configInputs.costoCaja ? configInputs.costoCaja.value : 4.00) || 0;
-    const uds = Math.max(1, parseInt(configInputs.unidadesCaja ? configInputs.unidadesCaja.value : 4, 10) || 1);
-    const porPerfume = caja / uds;
+    const caja = Math.max(0, parseFloat(configInputs.costoCaja ? configInputs.costoCaja.value : 4.00) || 0);
+    const porPerfume = caja / 4;
     if (configInputs.reempaque) {
       configInputs.reempaque.value = porPerfume.toFixed(2);
     }
   }
 
   function guardarConfiguracionBase() {
-    const costoCaja = Math.max(0, parseFloat(configInputs.costoCaja.value) || 4.00);
-    const unidadesCaja = Math.max(1, parseInt(configInputs.unidadesCaja.value, 10) || 4);
-    const costoPorPerfume = parseFloat((costoCaja / unidadesCaja).toFixed(2));
+    const rawCaja = configInputs.costoCaja ? configInputs.costoCaja.value : '4.00';
+    const costoCaja = Math.max(0, parseFloat(rawCaja) >= 0 ? parseFloat(rawCaja) : 4.00);
+    const costoPorPerfume = parseFloat((costoCaja / 4).toFixed(2));
 
     const nuevaConfig = {
       peso: Math.max(0, parseFloat(configInputs.peso.value) || 0.6),
       envioKg: Math.max(0, parseFloat(configInputs.envioKg.value) || 9.50),
       costoCaja: costoCaja,
-      unidadesCaja: unidadesCaja,
-      reempaque: costoPorPerfume, // Costo reempaque por perfume = Costo caja ÷ Unidades por caja
+      reempaque: costoPorPerfume, // Costo reempaque por perfume = Precio caja ÷ 4
       tc: Math.max(0, parseFloat(configInputs.tc.value) || 3.40),
       extras: Math.max(0, parseFloat(configInputs.extras.value) || 15.00)
     };
@@ -794,8 +789,7 @@ document.addEventListener('DOMContentLoaded', () => {
       configInputs.peso.value = FACTORY_DEFAULTS.peso;
       configInputs.envioKg.value = FACTORY_DEFAULTS.envioKg;
       if (configInputs.costoCaja) configInputs.costoCaja.value = FACTORY_DEFAULTS.costoCaja.toFixed(2);
-      if (configInputs.unidadesCaja) configInputs.unidadesCaja.value = FACTORY_DEFAULTS.unidadesCaja;
-      const costoPorPerfume = FACTORY_DEFAULTS.costoCaja / FACTORY_DEFAULTS.unidadesCaja;
+      const costoPorPerfume = FACTORY_DEFAULTS.costoCaja / 4;
       if (configInputs.reempaque) configInputs.reempaque.value = costoPorPerfume.toFixed(2);
       configInputs.tc.value = FACTORY_DEFAULTS.tc;
       configInputs.extras.value = FACTORY_DEFAULTS.extras;
@@ -853,14 +847,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Sincronización en vivo de campos de caja en el modal de configuración
+  // Sincronización en vivo del precio de caja en el modal de configuración
   if (configInputs.costoCaja) {
     configInputs.costoCaja.addEventListener('input', actualizarCostoCalculadoModal);
     configInputs.costoCaja.addEventListener('change', actualizarCostoCalculadoModal);
-  }
-  if (configInputs.unidadesCaja) {
-    configInputs.unidadesCaja.addEventListener('input', actualizarCostoCalculadoModal);
-    configInputs.unidadesCaja.addEventListener('change', actualizarCostoCalculadoModal);
   }
 
   // Botones del formulario
