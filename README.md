@@ -20,17 +20,17 @@ Aplicación móvil web progresiva (**PWA**) diseñada para dueños de tiendas e 
 
 ## 📐 Motor de Cálculos (Fórmulas Financieras)
 
-| Métrica | Fórmula |
-| :--- | :--- |
-| **Total Costo USA** | `Precio USA × Cantidad` |
-| **Flete Aéreo** | `Peso KG × Costo Envío por KG` |
-| **Total Gasto Envío** | `Flete + Reempaque` |
-| **Precio Total USD** | `Total Costo USA + Total Gasto Envío` |
-| **Precio Total Soles** | `Precio Total USD × Tipo de Cambio` |
-| **Costo por Unidad (S/)** | `Precio Total Soles ÷ Cantidad` |
-| **Ganancia por Unidad** | `Precio Venta - Costo por Unidad - Costos Extras` |
-| **Ganancia Total** | `Ganancia por Unidad × Cantidad` |
-| **Margen (%)** | `(Ganancia por Unidad ÷ Precio Venta) × 100` |
+| Métrica                   | Fórmula                                           |
+| :------------------------ | :------------------------------------------------ |
+| **Total Costo USA**       | `Precio USA × Cantidad`                           |
+| **Flete Aéreo**           | `Peso KG × Costo Envío por KG`                    |
+| **Total Gasto Envío**     | `Flete + Reempaque`                               |
+| **Precio Total USD**      | `Total Costo USA + Total Gasto Envío`             |
+| **Precio Total Soles**    | `Precio Total USD × Tipo de Cambio`               |
+| **Costo por Unidad (S/)** | `Precio Total Soles ÷ Cantidad`                   |
+| **Ganancia por Unidad**   | `Precio Venta - Costo por Unidad - Costos Extras` |
+| **Ganancia Total**        | `Ganancia por Unidad × Cantidad`                  |
+| **Margen (%)**            | `(Ganancia por Unidad ÷ Precio Venta) × 100`      |
 
 ---
 
@@ -38,7 +38,7 @@ Aplicación móvil web progresiva (**PWA**) diseñada para dueños de tiendas e 
 
 1. Abre la aplicación en **Safari** desde tu iPhone.
 2. Presiona el botón **Compartir** (icono de cuadrado con flecha hacia arriba en la barra inferior de Safari).
-3. Desplázate hacia abajo y selecciona **"Agregar a pantalla de inicio"** (*Add to Home Screen*).
+3. Desplázate hacia abajo y selecciona **"Agregar a pantalla de inicio"** (_Add to Home Screen_).
 4. Presiona **"Agregar"** en la esquina superior derecha.
 5. ¡Listo! La app aparecerá en tu pantalla de inicio como una aplicación nativa, a pantalla completa y con funcionamiento offline.
 
@@ -61,7 +61,7 @@ git remote add origin https://github.com/TU_USUARIO/TU_REPOSITORIO.git
 git push -u origin main
 ```
 
-*(Reemplaza `TU_USUARIO` y `TU_REPOSITORIO` con tus datos de GitHub)*.
+_(Reemplaza `TU_USUARIO` y `TU_REPOSITORIO` con tus datos de GitHub)_.
 
 ### Paso 2: Activar GitHub Pages en el repositorio
 
@@ -103,7 +103,7 @@ DUNES-APP
 
 ## 🧪 Pruebas Unitarias
 
-Para verificar la exactitud de las fórmulas matemáticas:
+Paraa verificar la exactitud de las fórmulas matemáticas:
 
 ```bash
 node tests/calculator.test.js
