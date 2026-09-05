@@ -35,10 +35,15 @@ function calculateDunesQuotation(params) {
   // 2. Flete = (Peso por Unidad KG * Cantidad) * Costo Envío KG
   const flete = (peso * cantidad) * envioKg;
 
-  // 3. Reempaque: valor total directo o cálculo dinámico (Cantidad × Costo Reempaque por Unidad)
+  // 3. Reempaque: valor total directo o cálculo dinámico (Cantidad × (Costo Caja ÷ Unidades Caja))
   let reempaque = 0;
   if (params.reempaque !== undefined && params.reempaque !== null && params.reempaque !== '') {
     reempaque = parseFloat(params.reempaque) || 0;
+  } else if (params.costoCaja !== undefined && params.unidadesCaja !== undefined) {
+    const costoCaja = parseFloat(params.costoCaja) || 0;
+    const unidadesCaja = Math.max(1, parseInt(params.unidadesCaja, 10) || 1);
+    const costoPorPerfume = costoCaja / unidadesCaja;
+    reempaque = cantidad * costoPorPerfume;
   } else if (params.costoReempaqueUnidad !== undefined) {
     reempaque = cantidad * (parseFloat(params.costoReempaqueUnidad) || 0);
   }

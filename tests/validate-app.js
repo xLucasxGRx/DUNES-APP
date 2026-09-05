@@ -49,7 +49,7 @@ const htmlContent = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'u
 
 const expectedIds = [
   'producto', 'cantidad', 'precioUSA', 'peso', 'envioKg', 'reempaque', 'tc', 'extras', 'venta',
-  'cfg-peso', 'cfg-envioKg', 'cfg-reempaque', 'cfg-tc', 'cfg-extras',
+  'cfg-peso', 'cfg-envioKg', 'cfg-costoCaja', 'cfg-unidadesCaja', 'cfg-reempaque', 'cfg-tc', 'cfg-extras',
   'res-nombre-costo', 'res-nombre-ganancia', 'alert-costo', 'alert-ganancia',
   'res-total-usa', 'res-flete', 'res-reempaque', 'res-total-usd', 'res-costo-peru', 'res-costo-total-soles',
   'res-ganancia-unidad', 'res-ganancia-total', 'res-margen', 'margen-bar-fill',
@@ -109,33 +109,31 @@ report('Caso 2 uds - Costo Unidad es S/ 88.91', res2.costoUnidad === 88.91, `Obt
 report('Caso 2 uds - Ganancia por unidad es S/ 35.09', res2.gananciaUnidad === 35.09, `Obtenido: ${res2.gananciaUnidad}`);
 report('Caso 2 uds - Ganancia total es S/ 70.18', res2.gananciaTotal === 70.18, `Obtenido: ${res2.gananciaTotal}`);
 
-// 4. Verificación del Sistema Inteligente de Reempaque
-console.log('\n4. Verificando lógica del Sistema Inteligente de Reempaque...');
-// Caso 1 ud: 1.00 USD
-const rAuto1 = calculateDunesQuotation({ cantidad: 1, costoReempaqueUnidad: 1.00 });
-report('Reempaque automático para 1 perfume es $ 1.00', rAuto1.reempaque === 1.00, `Obtenido: ${rAuto1.reempaque}`);
+// 4. Verificación del Sistema Inteligente de Reempaque (Costo Caja ÷ Unidades por Caja)
+console.log('\n4. Verificando lógica del Sistema Inteligente de Reempaque (Caja y Capacidad)...');
+// Caso Base: Caja $4.00, Capacidad 4 unidades -> $1.00/perfume
+const rAuto1 = calculateDunesQuotation({ cantidad: 1, costoCaja: 4.00, unidadesCaja: 4 });
+report('Reempaque automático para 1 perfume (caja $4 / 4) es $ 1.00', rAuto1.reempaque === 1.00, `Obtenido: ${rAuto1.reempaque}`);
 
-// Caso 2 uds: 2.00 USD
-const rAuto2 = calculateDunesQuotation({ cantidad: 2, costoReempaqueUnidad: 1.00 });
-report('Reempaque automático para 2 perfumes es $ 2.00', rAuto2.reempaque === 2.00, `Obtenido: ${rAuto2.reempaque}`);
+const rAuto2 = calculateDunesQuotation({ cantidad: 2, costoCaja: 4.00, unidadesCaja: 4 });
+report('Reempaque automático para 2 perfumes (caja $4 / 4) es $ 2.00', rAuto2.reempaque === 2.00, `Obtenido: ${rAuto2.reempaque}`);
 
-// Caso 3 uds: 3.00 USD
-const rAuto3 = calculateDunesQuotation({ cantidad: 3, costoReempaqueUnidad: 1.00 });
-report('Reempaque automático para 3 perfumes es $ 3.00', rAuto3.reempaque === 3.00, `Obtenido: ${rAuto3.reempaque}`);
+// Ejemplo del prompt: Cantidad 3 perfumes -> 3 × (4 ÷ 4) = $3.00
+const rAuto3 = calculateDunesQuotation({ cantidad: 3, costoCaja: 4.00, unidadesCaja: 4 });
+report('Ejemplo prompt: Cantidad 3 perfumes -> 3 × (4 ÷ 4) = $ 3.00', rAuto3.reempaque === 3.00, `Obtenido: ${rAuto3.reempaque}`);
 
-// Caso 4 uds: 4.00 USD
-const rAuto4 = calculateDunesQuotation({ cantidad: 4, costoReempaqueUnidad: 1.00 });
-report('Reempaque automático para 4 perfumes es $ 4.00', rAuto4.reempaque === 4.00, `Obtenido: ${rAuto4.reempaque}`);
+const rAuto4 = calculateDunesQuotation({ cantidad: 4, costoCaja: 4.00, unidadesCaja: 4 });
+report('Reempaque automático para 4 perfumes (caja $4 / 4) es $ 4.00', rAuto4.reempaque === 4.00, `Obtenido: ${rAuto4.reempaque}`);
 
-// Caso Cambio de Tarifa: 1.25 USD por unidad (Caja courier $5 / 4 perfumes)
-const rTarifa1 = calculateDunesQuotation({ cantidad: 1, costoReempaqueUnidad: 1.25 });
-report('Cambio de tarifa: 1 perfume con base $1.25 es $ 1.25', rTarifa1.reempaque === 1.25, `Obtenido: ${rTarifa1.reempaque}`);
-const rTarifa4 = calculateDunesQuotation({ cantidad: 4, costoReempaqueUnidad: 1.25 });
-report('Cambio de tarifa: 4 perfumes con base $1.25 es $ 5.00', rTarifa4.reempaque === 5.00, `Obtenido: ${rTarifa4.reempaque}`);
+// Caso Cambio de Tarifa Courier del prompt: Caja $5.00, Capacidad 4 unidades (5 ÷ 4 = $1.25/perfume)
+const rTarifa1 = calculateDunesQuotation({ cantidad: 1, costoCaja: 5.00, unidadesCaja: 4 });
+report('Nueva tarifa courier ($5 / 4): 1 perfume es $ 1.25', rTarifa1.reempaque === 1.25, `Obtenido: ${rTarifa1.reempaque}`);
+const rTarifa4 = calculateDunesQuotation({ cantidad: 4, costoCaja: 5.00, unidadesCaja: 4 });
+report('Nueva tarifa courier ($5 / 4): 4 perfumes es $ 5.00', rTarifa4.reempaque === 5.00, `Obtenido: ${rTarifa4.reempaque}`);
 
-// Caso Modificación Manual: auto sería $3.00, usuario edita a $5.00
-const rManual = calculateDunesQuotation({ cantidad: 3, reempaque: 5.00, peso: 0.6, envioKg: 9.50 });
-report('Modificación manual: reempaque $ 5.00 se respeta en totalEnvio', rManual.totalEnvio === 22.10, `Obtenido: ${rManual.totalEnvio}`);
+// Caso Modificación Manual del prompt: Sistema calcula $3.00, usuario cambia a $4.00
+const rManual = calculateDunesQuotation({ cantidad: 3, costoCaja: 4.00, unidadesCaja: 4, reempaque: 4.00, peso: 0.6, envioKg: 9.50 });
+report('Edición manual del prompt: reempaque $ 4.00 se respeta en totalEnvio', rManual.reempaque === 4.00 && rManual.totalEnvio === 21.10, `Obtenido reempaque: ${rManual.reempaque}, totalEnvio: ${rManual.totalEnvio}`);
 
 // 5. Verificación de Archivos y Rutas PWA
 console.log('\n5. Verificando archivos de despliegue PWA y GitHub Pages...');

@@ -368,11 +368,28 @@
           </div>
 
           <div class="input-field">
-            <label for="cfg-reempaque">Costo reempaque por unidad ($)</label>
+            <label for="cfg-costoCaja">Costo caja reempaque ($)</label>
             <div class="input-wrapper">
               <span class="input-prefix">$</span>
-              <input id="cfg-reempaque" type="number" min="0" step="0.01" value="1.00">
+              <input id="cfg-costoCaja" type="number" min="0" step="0.01" value="4.00">
             </div>
+          </div>
+
+          <div class="input-field">
+            <label for="cfg-unidadesCaja">Capacidad caja (4 unidades)</label>
+            <div class="input-wrapper">
+              <input id="cfg-unidadesCaja" type="number" min="1" step="1" value="4">
+              <span class="input-suffix">uds</span>
+            </div>
+          </div>
+
+          <div class="input-field">
+            <label for="cfg-reempaque">Costo calculado por perfume ($)</label>
+            <div class="input-wrapper">
+              <span class="input-prefix">$</span>
+              <input id="cfg-reempaque" type="number" min="0" step="0.01" value="1.00" readonly style="opacity: 0.85; background: rgba(255,255,255,0.03); cursor: default;">
+            </div>
+            <span class="input-hint">Automático: Costo caja ÷ Unidades</span>
           </div>
 
           <div class="input-field">

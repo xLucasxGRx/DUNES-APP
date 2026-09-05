@@ -213,9 +213,79 @@ console.log('--- Iniciando Tests Matemáticos de DUNES PARFUMS ---');
   // Total USD = 90 + 22.10 = 112.10
   assert.strictEqual(res.precioTotalUSD, 112.10, 'Total USD debe ser 112.10');
 
-  console.log('✔ Caso 8 (Modificación manual a $5.00 respetada en cálculos) superado con éxito.');
+}
+
+// Caso 9: Configuración Real — Costo Caja ÷ Unidades por Caja (Base: Caja $4.00, Capacidad 4)
+{
+  const costoCaja = 4.00;
+  const unidadesCaja = 4;
+
+  // 1 perfume: 1 × (4 ÷ 4) = $1.00
+  const r1 = calculateDunesQuotation({ cantidad: 1, costoCaja, unidadesCaja });
+  assert.strictEqual(r1.reempaque, 1.00, 'Reempaque 1 perfume debe ser 1.00 USD');
+
+  // 2 perfumes: 2 × (4 ÷ 4) = $2.00
+  const r2 = calculateDunesQuotation({ cantidad: 2, costoCaja, unidadesCaja });
+  assert.strictEqual(r2.reempaque, 2.00, 'Reempaque 2 perfumes debe ser 2.00 USD');
+
+  // 3 perfumes: 3 × (4 ÷ 4) = $3.00 (Ejemplo del prompt)
+  const r3 = calculateDunesQuotation({ cantidad: 3, costoCaja, unidadesCaja });
+  assert.strictEqual(r3.reempaque, 3.00, 'Reempaque 3 perfumes debe ser 3.00 USD');
+
+  // 4 perfumes: 4 × (4 ÷ 4) = $4.00
+  const r4 = calculateDunesQuotation({ cantidad: 4, costoCaja, unidadesCaja });
+  assert.strictEqual(r4.reempaque, 4.00, 'Reempaque 4 perfumes debe ser 4.00 USD');
+
+  console.log('✔ Caso 9 (Cálculo real Caja $4 / 4 unidades: 1, 2, 3, 4 perfumes) superado con éxito.');
+}
+
+// Caso 10: Cambio de precio de caja (Caja $5.00, Capacidad 4 -> 5 ÷ 4 = $1.25)
+{
+  const costoCaja = 5.00;
+  const unidadesCaja = 4;
+
+  // 1 perfume: 1 × 1.25 = $1.25
+  const r1 = calculateDunesQuotation({ cantidad: 1, costoCaja, unidadesCaja });
+  assert.strictEqual(r1.reempaque, 1.25, '1 perfume con caja $5 debe ser 1.25 USD');
+
+  // 4 perfumes: 4 × 1.25 = $5.00
+  const r4 = calculateDunesQuotation({ cantidad: 4, costoCaja, unidadesCaja });
+  assert.strictEqual(r4.reempaque, 5.00, '4 perfumes con caja $5 debe ser 5.00 USD');
+
+  console.log('✔ Caso 10 (Cambio de precio de caja a $5 / 4 uds: 1 ud -> $1.25, 4 uds -> $5.00) superado con éxito.');
+}
+
+// Caso 11: Edición Manual específica del prompt (Sistema calcula $3.00, usuario cambia a $4.00)
+{
+  const inputManualPrompt = {
+    cantidad: 3,
+    costoCaja: 4.00,
+    unidadesCaja: 4,
+    reempaque: 4.00, // Usuario cambia manual a $4.00
+    precioUSA: 25.00,
+    peso: 0.60,
+    envioKg: 9.50,
+    tc: 3.40,
+    extras: 15.00,
+    venta: 160.00
+  };
+
+  const res = calculateDunesQuotation(inputManualPrompt);
+
+  assert.strictEqual(res.reempaque, 4.00, 'Reempaque manual de $4.00 debe respetarse');
+  // Flete = (0.6 * 3) * 9.50 = 17.10
+  assert.strictEqual(res.flete, 17.10, 'Flete debe ser 17.10 USD');
+  // Total Envio = 17.10 + 4.00 = 21.10
+  assert.strictEqual(res.totalEnvio, 21.10, 'Total envío debe ser 21.10 USD (17.10 + 4.00)');
+  // Total USA = 25 * 3 = 75
+  assert.strictEqual(res.totalUSA, 75.00, 'Total USA debe ser 75.00 USD');
+  // Total USD = 75 + 21.10 = 96.10
+  assert.strictEqual(res.precioTotalUSD, 96.10, 'Total USD debe ser 96.10 USD');
+
+  console.log('✔ Caso 11 (Edición manual a $4.00 en cotización específica) superado con éxito.');
 }
 
 console.log('--- TODOS LOS TESTS MATEMÁTICOS PASARON SATISFACTORIAMENTE ---');
+
 
 

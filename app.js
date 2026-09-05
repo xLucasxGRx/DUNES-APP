@@ -19,7 +19,9 @@ document.addEventListener('DOMContentLoaded', () => {
     cantidad: 1,
     peso: 0.6,
     envioKg: 9.50,
-    reempaque: 1.00,
+    costoCaja: 4.00,    // Costo de reempaque por caja ($)
+    unidadesCaja: 4,     // Capacidad caja (unidades)
+    reempaque: 1.00,     // Costo calculado por perfume ($) (4.00 ÷ 4 = 1.00)
     tc: 3.40,
     extras: 15.00
   };
@@ -41,6 +43,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const configInputs = {
     peso: document.getElementById('cfg-peso'),
     envioKg: document.getElementById('cfg-envioKg'),
+    costoCaja: document.getElementById('cfg-costoCaja'),
+    unidadesCaja: document.getElementById('cfg-unidadesCaja'),
     reempaque: document.getElementById('cfg-reempaque'),
     tc: document.getElementById('cfg-tc'),
     extras: document.getElementById('cfg-extras')
@@ -127,7 +131,14 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.BASE_CONFIG);
       if (saved) {
-        return { ...FACTORY_DEFAULTS, ...JSON.parse(saved) };
+        const merged = { ...FACTORY_DEFAULTS, ...JSON.parse(saved) };
+        const costoCaja = parseFloat(merged.costoCaja) || FACTORY_DEFAULTS.costoCaja;
+        const unidadesCaja = Math.max(1, parseInt(merged.unidadesCaja, 10) || FACTORY_DEFAULTS.unidadesCaja);
+        merged.costoCaja = costoCaja;
+        merged.unidadesCaja = unidadesCaja;
+        // Costo reempaque por perfume = Costo caja ÷ Unidades por caja
+        merged.reempaque = parseFloat((costoCaja / unidadesCaja).toFixed(2));
+        return merged;
       }
     } catch (e) {
       console.warn('Error al leer configuración base', e);
@@ -183,27 +194,29 @@ document.addEventListener('DOMContentLoaded', () => {
       ? { ...configBase, ...ultimosValores }
       : configBase;
 
-    const costoReempaqueUnidad = parseFloat(configBase.reempaque) || 1.00;
+    const costoReempaquePorPerfume = parseFloat(configBase.reempaque) || 1.00;
 
     inputs.cantidad.value = 1;
     inputs.peso.value = valoresEfectivos.peso;
     inputs.envioKg.value = valoresEfectivos.envioKg;
     
     // Si el usuario tenía un reempaque manual modificado guardado, lo respetamos;
-    // si no, se calcula dinámicamente cantidad (1) × costo unidad base.
+    // si no, se calcula dinámicamente cantidad (1) × costo por perfume.
     if (ultimosValores && ultimosValores.reempaque !== undefined && ultimosValores.reempaque !== null) {
       inputs.reempaque.value = parseFloat(ultimosValores.reempaque).toFixed(2);
     } else {
-      inputs.reempaque.value = (1 * costoReempaqueUnidad).toFixed(2);
+      inputs.reempaque.value = (1 * costoReempaquePorPerfume).toFixed(2);
     }
 
     inputs.tc.value = valoresEfectivos.tc;
     inputs.extras.value = valoresEfectivos.extras;
 
-    // Sincronizar inputs de la sección de Configuración Base (costo por unidad base)
+    // Sincronizar inputs de la sección de Configuración Base
     configInputs.peso.value = configBase.peso;
     configInputs.envioKg.value = configBase.envioKg;
-    configInputs.reempaque.value = costoReempaqueUnidad.toFixed(2);
+    if (configInputs.costoCaja) configInputs.costoCaja.value = (configBase.costoCaja || 4.00).toFixed(2);
+    if (configInputs.unidadesCaja) configInputs.unidadesCaja.value = configBase.unidadesCaja || 4;
+    if (configInputs.reempaque) configInputs.reempaque.value = costoReempaquePorPerfume.toFixed(2);
     configInputs.tc.value = configBase.tc;
     configInputs.extras.value = configBase.extras;
   }
@@ -663,12 +676,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // Cargar la configuración base activa para este nuevo cálculo
     const configBase = obtenerConfigBase();
     const ultimos = obtenerUltimosValores() || configBase;
-    const costoReempaqueUnidad = parseFloat(configBase.reempaque) || 1.00;
+    const costoPorPerfume = parseFloat(configBase.reempaque) || 1.00;
 
     inputs.peso.value = ultimos.peso;
     inputs.envioKg.value = ultimos.envioKg;
-    // En nueva cotización (cantidad = 1), reempaque automático = 1 × costoReempaqueUnidad
-    inputs.reempaque.value = (1 * costoReempaqueUnidad).toFixed(2);
+    // En nueva cotización (cantidad = 1), reempaque automático = 1 × costo reempaque por perfume
+    inputs.reempaque.value = (1 * costoPorPerfume).toFixed(2);
     inputs.tc.value = ultimos.tc;
     inputs.extras.value = ultimos.extras;
 
@@ -687,11 +700,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Cargar la configuración base
     const configBase = obtenerConfigBase();
-    const costoReempaqueUnidad = parseFloat(configBase.reempaque) || 1.00;
+    const costoPorPerfume = parseFloat(configBase.reempaque) || 1.00;
 
     inputs.peso.value = configBase.peso;
     inputs.envioKg.value = configBase.envioKg;
-    inputs.reempaque.value = (1 * costoReempaqueUnidad).toFixed(2);
+    inputs.reempaque.value = (1 * costoPorPerfume).toFixed(2);
     inputs.tc.value = configBase.tc;
     inputs.extras.value = configBase.extras;
 
@@ -711,7 +724,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const configBase = obtenerConfigBase();
     configInputs.peso.value = configBase.peso;
     configInputs.envioKg.value = configBase.envioKg;
-    configInputs.reempaque.value = (parseFloat(configBase.reempaque) || 1.00).toFixed(2);
+    if (configInputs.costoCaja) configInputs.costoCaja.value = (configBase.costoCaja || 4.00).toFixed(2);
+    if (configInputs.unidadesCaja) configInputs.unidadesCaja.value = configBase.unidadesCaja || 4;
+    
+    const costoCaja = parseFloat(configBase.costoCaja) || 4.00;
+    const unidadesCaja = Math.max(1, parseInt(configBase.unidadesCaja, 10) || 4);
+    const costoPorPerfume = parseFloat((costoCaja / unidadesCaja).toFixed(2));
+    if (configInputs.reempaque) configInputs.reempaque.value = costoPorPerfume.toFixed(2);
+
     configInputs.tc.value = configBase.tc;
     configInputs.extras.value = configBase.extras;
 
@@ -725,11 +745,26 @@ document.addEventListener('DOMContentLoaded', () => {
     modalConfig.setAttribute('aria-hidden', 'true');
   }
 
+  function actualizarCostoCalculadoModal() {
+    const caja = parseFloat(configInputs.costoCaja ? configInputs.costoCaja.value : 4.00) || 0;
+    const uds = Math.max(1, parseInt(configInputs.unidadesCaja ? configInputs.unidadesCaja.value : 4, 10) || 1);
+    const porPerfume = caja / uds;
+    if (configInputs.reempaque) {
+      configInputs.reempaque.value = porPerfume.toFixed(2);
+    }
+  }
+
   function guardarConfiguracionBase() {
+    const costoCaja = Math.max(0, parseFloat(configInputs.costoCaja.value) || 4.00);
+    const unidadesCaja = Math.max(1, parseInt(configInputs.unidadesCaja.value, 10) || 4);
+    const costoPorPerfume = parseFloat((costoCaja / unidadesCaja).toFixed(2));
+
     const nuevaConfig = {
       peso: Math.max(0, parseFloat(configInputs.peso.value) || 0.6),
       envioKg: Math.max(0, parseFloat(configInputs.envioKg.value) || 9.50),
-      reempaque: Math.max(0, parseFloat(configInputs.reempaque.value) || 1.00),
+      costoCaja: costoCaja,
+      unidadesCaja: unidadesCaja,
+      reempaque: costoPorPerfume, // Costo reempaque por perfume = Costo caja ÷ Unidades por caja
       tc: Math.max(0, parseFloat(configInputs.tc.value) || 3.40),
       extras: Math.max(0, parseFloat(configInputs.extras.value) || 15.00)
     };
@@ -737,18 +772,17 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.setItem(STORAGE_KEYS.BASE_CONFIG, JSON.stringify(nuevaConfig));
 
     // Aplicar de inmediato al cotizador:
-    // El reempaque total se actualiza automáticamente con la nueva tarifa por unidad
-    // REEMPAQUE TOTAL = CANTIDAD × COSTO DE REEMPAQUE POR UNIDAD
+    // Reempaque total = Cantidad de perfumes × costo reempaque por perfume
     const cantActual = Math.max(1, parseInt(inputs.cantidad.value, 10) || 1);
     inputs.peso.value = nuevaConfig.peso;
     inputs.envioKg.value = nuevaConfig.envioKg;
-    inputs.reempaque.value = (cantActual * nuevaConfig.reempaque).toFixed(2);
+    inputs.reempaque.value = (cantActual * costoPorPerfume).toFixed(2);
     inputs.tc.value = nuevaConfig.tc;
     inputs.extras.value = nuevaConfig.extras;
 
     autoGuardarValoresUsuario();
     ejecutarCalculo();
-    showToast('Valores base de importación guardados exitosamente');
+    showToast('Configuración de reempaque y costos guardada exitosamente');
     setTimeout(cerrarModalConfiguracion, 350);
   }
 
@@ -759,14 +793,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
       configInputs.peso.value = FACTORY_DEFAULTS.peso;
       configInputs.envioKg.value = FACTORY_DEFAULTS.envioKg;
-      configInputs.reempaque.value = FACTORY_DEFAULTS.reempaque.toFixed(2);
+      if (configInputs.costoCaja) configInputs.costoCaja.value = FACTORY_DEFAULTS.costoCaja.toFixed(2);
+      if (configInputs.unidadesCaja) configInputs.unidadesCaja.value = FACTORY_DEFAULTS.unidadesCaja;
+      const costoPorPerfume = FACTORY_DEFAULTS.costoCaja / FACTORY_DEFAULTS.unidadesCaja;
+      if (configInputs.reempaque) configInputs.reempaque.value = costoPorPerfume.toFixed(2);
       configInputs.tc.value = FACTORY_DEFAULTS.tc;
       configInputs.extras.value = FACTORY_DEFAULTS.extras;
 
       const cantActual = Math.max(1, parseInt(inputs.cantidad.value, 10) || 1);
       inputs.peso.value = FACTORY_DEFAULTS.peso;
       inputs.envioKg.value = FACTORY_DEFAULTS.envioKg;
-      inputs.reempaque.value = (cantActual * FACTORY_DEFAULTS.reempaque).toFixed(2);
+      inputs.reempaque.value = (cantActual * costoPorPerfume).toFixed(2);
       inputs.tc.value = FACTORY_DEFAULTS.tc;
       inputs.extras.value = FACTORY_DEFAULTS.extras;
 
@@ -800,12 +837,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!input) return;
     if (key === 'cantidad') {
       // Cuando el usuario modifica la cantidad:
-      // REEMPAQUE TOTAL = CANTIDAD × COSTO DE REEMPAQUE POR UNIDAD
+      // Reempaque total = Cantidad de perfumes × costo reempaque por perfume
       const onCantidadChange = () => {
         const cant = Math.max(1, parseInt(inputs.cantidad.value, 10) || 1);
         const configBase = obtenerConfigBase();
-        const costoReempaqueUnidad = parseFloat(configBase.reempaque) || 1.00;
-        inputs.reempaque.value = (cant * costoReempaqueUnidad).toFixed(2);
+        const costoPorPerfume = parseFloat(configBase.reempaque) || 1.00;
+        inputs.reempaque.value = (cant * costoPorPerfume).toFixed(2);
         ejecutarCalculo();
       };
       input.addEventListener('input', onCantidadChange);
@@ -815,6 +852,16 @@ document.addEventListener('DOMContentLoaded', () => {
       input.addEventListener('change', ejecutarCalculo);
     }
   });
+
+  // Sincronización en vivo de campos de caja en el modal de configuración
+  if (configInputs.costoCaja) {
+    configInputs.costoCaja.addEventListener('input', actualizarCostoCalculadoModal);
+    configInputs.costoCaja.addEventListener('change', actualizarCostoCalculadoModal);
+  }
+  if (configInputs.unidadesCaja) {
+    configInputs.unidadesCaja.addEventListener('input', actualizarCostoCalculadoModal);
+    configInputs.unidadesCaja.addEventListener('change', actualizarCostoCalculadoModal);
+  }
 
   // Botones del formulario
   btnCalcular.addEventListener('click', () => {
