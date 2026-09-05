@@ -54,7 +54,7 @@ const expectedIds = [
   'res-total-usa', 'res-flete', 'res-reempaque', 'res-total-usd', 'res-costo-peru', 'res-costo-total-soles',
   'res-ganancia-unidad', 'res-ganancia-total', 'res-margen', 'margen-bar-fill',
   'btn-calcular', 'btn-guardar', 'btn-nuevo', 'btn-limpiar', 'btn-borrar-historial',
-  'btn-toggle-config', 'config-toggle-btn', 'config-body', 'btn-guardar-config', 'btn-restaurar-fabrica',
+  'btn-abrir-config', 'btn-cerrar-config', 'modal-configuracion', 'btn-guardar-config', 'btn-restaurar-fabrica',
   'historial-lista', 'historial-contador', 'historial-actions',
   'modal-detalle', 'modal-producto', 'modal-fecha', 'modal-contenido', 'btn-cerrar-modal'
 ];

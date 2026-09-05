@@ -16,7 +16,8 @@ const STATIC_ASSETS = [
   './manifest.json',
   './assets/icon-192.png',
   './assets/icon-512.png',
-  './assets/apple-touch-icon.png'
+  './assets/apple-touch-icon.png',
+  './assets/logohorizontaldunesparfums.webp'
 ];
 
 // Instalación: Precarga de recursos en la caché

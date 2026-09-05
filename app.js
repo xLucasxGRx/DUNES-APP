@@ -80,12 +80,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnLimpiar = document.getElementById('btn-limpiar');
   const btnBorrarHistorial = document.getElementById('btn-borrar-historial');
 
-  // Referencias de sección Configuración
-  const btnToggleConfig = document.getElementById('btn-toggle-config');
-  const configToggleBtn = document.getElementById('config-toggle-btn');
-  const configToggleText = document.getElementById('config-toggle-text');
-  const configChevron = document.getElementById('config-chevron');
-  const configBody = document.getElementById('config-body');
+  // Referencias de sección Configuración (Modal)
+  const btnAbrirConfig = document.getElementById('btn-abrir-config');
+  const btnCerrarConfig = document.getElementById('btn-cerrar-config');
+  const modalConfig = document.getElementById('modal-configuracion');
   const btnGuardarConfig = document.getElementById('btn-guardar-config');
   const btnRestaurarFabrica = document.getElementById('btn-restaurar-fabrica');
 
@@ -691,20 +689,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
   /**
    * ========================================================================
-   * SECCIÓN CONFIGURACIÓN DE COSTOS (ACCORDION & ACCIONES)
+   * SECCIÓN CONFIGURACIÓN DE COSTOS (MODAL & ACCIONES)
    * ========================================================================
    */
-  function toggleConfiguracion() {
-    const estaVisible = configBody.style.display !== 'none';
-    if (estaVisible) {
-      configBody.style.display = 'none';
-      configToggleText.textContent = 'Mostrar';
-      configToggleBtn.classList.remove('is-open');
-    } else {
-      configBody.style.display = 'flex';
-      configToggleText.textContent = 'Ocultar';
-      configToggleBtn.classList.add('is-open');
-    }
+  function abrirModalConfiguracion() {
+    if (!modalConfig) return;
+    const configBase = obtenerConfigBase();
+    configInputs.peso.value = configBase.peso;
+    configInputs.envioKg.value = configBase.envioKg;
+    configInputs.reempaque.value = configBase.reempaque;
+    configInputs.tc.value = configBase.tc;
+    configInputs.extras.value = configBase.extras;
+
+    modalConfig.classList.add('is-active');
+    modalConfig.setAttribute('aria-hidden', 'false');
+  }
+
+  function cerrarModalConfiguracion() {
+    if (!modalConfig) return;
+    modalConfig.classList.remove('is-active');
+    modalConfig.setAttribute('aria-hidden', 'true');
   }
 
   function guardarConfiguracionBase() {
@@ -718,7 +722,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     localStorage.setItem(STORAGE_KEYS.BASE_CONFIG, JSON.stringify(nuevaConfig));
 
-    // Si el usuario lo desea, aplicar de inmediato al formulario actual
+    // Aplicar de inmediato al cotizador
     inputs.peso.value = nuevaConfig.peso;
     inputs.envioKg.value = nuevaConfig.envioKg;
     inputs.reempaque.value = nuevaConfig.reempaque;
@@ -728,6 +732,7 @@ document.addEventListener('DOMContentLoaded', () => {
     autoGuardarValoresUsuario();
     ejecutarCalculo();
     showToast('Valores base de importación guardados exitosamente');
+    setTimeout(cerrarModalConfiguracion, 350);
   }
 
   function restaurarValoresFabrica() {
@@ -749,6 +754,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       ejecutarCalculo();
       showToast('Configuración de fábrica DUNES restaurada', 'info');
+      setTimeout(cerrarModalConfiguracion, 350);
     }
   }
 
@@ -790,12 +796,19 @@ document.addEventListener('DOMContentLoaded', () => {
   btnLimpiar.addEventListener('click', limpiarDatos);
   btnBorrarHistorial.addEventListener('click', borrarTodoHistorial);
 
-  // Sección Configuración
-  btnToggleConfig.addEventListener('click', toggleConfiguracion);
+  // Sección Configuración (Modal)
+  if (btnAbrirConfig) btnAbrirConfig.addEventListener('click', abrirModalConfiguracion);
+  if (btnCerrarConfig) btnCerrarConfig.addEventListener('click', cerrarModalConfiguracion);
   btnGuardarConfig.addEventListener('click', guardarConfiguracionBase);
   btnRestaurarFabrica.addEventListener('click', restaurarValoresFabrica);
 
-  // Modal
+  if (modalConfig) {
+    modalConfig.addEventListener('click', (e) => {
+      if (e.target === modalConfig) cerrarModalConfiguracion();
+    });
+  }
+
+  // Modal Detalle
   btnCerrarModal.addEventListener('click', cerrarModal);
   btnCerrarModalBottom.addEventListener('click', cerrarModal);
   btnCargarModal.addEventListener('click', cargarItemEnFormulario);
@@ -804,26 +817,27 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && modalDetalle.classList.contains('is-active')) {
-      cerrarModal();
+    if (e.key === 'Escape') {
+      if (modalDetalle.classList.contains('is-active')) cerrarModal();
+      if (modalConfig && modalConfig.classList.contains('is-active')) cerrarModalConfiguracion();
     }
   });
 
-  // Estado Online / Offline
+  // Estado Online / Offline (Compatible con mini indicador y estándar)
   function actualizarEstadoConexion() {
     if (!pwaStatus) return;
     const isOnline = navigator.onLine;
-    const pulse = pwaStatus.querySelector('.status-pulse');
-    const label = pwaStatus.querySelector('.status-label');
+    const pulse = pwaStatus.querySelector('.status-dot-mini, .status-pulse');
+    const label = pwaStatus.querySelector('.status-text-mini, .status-label');
 
     if (pulse && label) {
       if (isOnline) {
         pulse.style.background = 'var(--emerald-profit)';
-        pulse.style.boxShadow = '0 0 8px var(--emerald-profit)';
+        pulse.style.boxShadow = '0 0 6px var(--emerald-profit)';
         label.textContent = 'Online';
       } else {
         pulse.style.background = 'var(--gold-primary)';
-        pulse.style.boxShadow = '0 0 8px var(--gold-primary)';
+        pulse.style.boxShadow = '0 0 6px var(--gold-primary)';
         label.textContent = 'Offline (PWA)';
       }
     }

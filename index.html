@@ -26,18 +26,22 @@
 <body>
 
   <div class="app-container">
-    <!-- Header Principal -->
+    <!-- Header Principal Minimalista de Lujo -->
     <header class="app-header">
-      <div class="brand-badge">
-        <span class="brand-crest">🌙</span>
-        <div class="brand-text">
-          <h1 class="brand-title">DUNES PARFUMS</h1>
-          <p class="brand-subtitle">Cotizador Courier USA 🇺🇸 → Perú 🇵🇪</p>
-        </div>
+      <div class="header-brand-group">
+        <img src="./assets/logohorizontaldunesparfums.webp" alt="DUNES PARFUMS" class="brand-logo-img">
+        <p class="brand-tagline">Cotizador Courier USA 🇺🇸 → Perú 🇵🇪</p>
       </div>
-      <div id="pwa-status" class="status-indicator" title="Estado de la aplicación">
-        <span class="status-pulse"></span>
-        <span class="status-label">Online</span>
+
+      <div class="header-controls">
+        <div id="pwa-status" class="status-indicator-mini" title="Estado de la aplicación">
+          <span class="status-dot-mini"></span>
+          <span class="status-text-mini">Online</span>
+        </div>
+
+        <button id="btn-abrir-config" type="button" class="btn-config-icon" title="Configuración de Costos Base" aria-label="Configuración de Costos Base">
+          <span class="gear-icon">⚙️</span>
+        </button>
       </div>
     </header>
 
@@ -270,78 +274,6 @@
         </div>
       </section>
 
-      <!-- SECCIÓN: CONFIGURACIÓN DE COSTOS (MEMORIA Y VALORES BASE) -->
-      <section class="section-card config-section" id="seccion-configuracion">
-        <div class="section-header config-toggle-header" id="btn-toggle-config">
-          <div class="section-title-wrapper">
-            <span class="section-icon">⚙️</span>
-            <h2 class="section-title">CONFIGURACIÓN DE COSTOS</h2>
-          </div>
-          <button type="button" class="btn-toggle-badge" id="config-toggle-btn">
-            <span id="config-toggle-text">Mostrar</span>
-            <span class="chevron" id="config-chevron">▼</span>
-          </button>
-        </div>
-        
-        <div class="config-body" id="config-body" style="display: none;">
-          <p class="config-desc">Configura los valores base de importación para nuevas cotizaciones. También se recuerdan automáticamente tus últimos cambios.</p>
-
-          <div class="input-grid input-grid-4">
-            <div class="input-field">
-              <label for="cfg-peso">Peso base (KG)</label>
-              <div class="input-wrapper">
-                <input id="cfg-peso" type="number" min="0" step="0.01" value="0.6">
-                <span class="input-suffix">KG</span>
-              </div>
-            </div>
-
-            <div class="input-field">
-              <label for="cfg-envioKg">Envío base / KG ($)</label>
-              <div class="input-wrapper">
-                <span class="input-prefix">$</span>
-                <input id="cfg-envioKg" type="number" min="0" step="0.01" value="9.50">
-              </div>
-            </div>
-
-            <div class="input-field">
-              <label for="cfg-reempaque">Reempaque base ($)</label>
-              <div class="input-wrapper">
-                <span class="input-prefix">$</span>
-                <input id="cfg-reempaque" type="number" min="0" step="0.01" value="1.00">
-              </div>
-            </div>
-
-            <div class="input-field">
-              <label for="cfg-tc">T.C. base (S/)</label>
-              <div class="input-wrapper">
-                <span class="input-prefix">S/</span>
-                <input id="cfg-tc" type="number" min="0" step="0.01" value="3.40">
-              </div>
-            </div>
-
-            <div class="input-field input-field-full">
-              <label for="cfg-extras">Costos extras base locales (S/)</label>
-              <div class="input-wrapper">
-                <span class="input-prefix">S/</span>
-                <input id="cfg-extras" type="number" min="0" step="0.01" value="15.00">
-              </div>
-              <span class="input-hint">Delivery, caja de envío, bolsa de regalo</span>
-            </div>
-          </div>
-
-          <div class="config-actions-grid">
-            <button type="button" id="btn-guardar-config" class="btn btn-secondary">
-              <span class="btn-icon">💾</span>
-              <span>Guardar Valores Base</span>
-            </button>
-            <button type="button" id="btn-restaurar-fabrica" class="btn btn-tertiary">
-              <span class="btn-icon">🔄</span>
-              <span>Restablecer Fábrica DUNES</span>
-            </button>
-          </div>
-        </div>
-      </section>
-
       <!-- SECCIÓN HISTORIAL: COTIZACIONES GUARDADAS -->
       <section class="section-card history-section" id="seccion-historial">
         <div class="section-header">
@@ -395,6 +327,76 @@
         </button>
         <button id="btn-cerrar-modal-bottom" class="btn btn-tertiary">
           <span>Cerrar</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE CONFIGURACIÓN DE COSTOS BASE -->
+  <div id="modal-configuracion" class="modal-backdrop" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="modal-tag">Valores Predeterminados</span>
+          <h3 class="modal-title">⚙️ Configuración de Costos</h3>
+          <span class="modal-date">Valores base para nuevas cotizaciones</span>
+        </div>
+        <button id="btn-cerrar-config" class="modal-close-btn" aria-label="Cerrar configuración">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <p class="config-modal-desc">Define las tarifas base de courier y aduanas. Recuerda que la app también recuerda automáticamente los últimos cambios que realizas al cotizar.</p>
+
+        <div class="input-grid input-grid-4">
+          <div class="input-field">
+            <label for="cfg-peso">Peso base (KG)</label>
+            <div class="input-wrapper">
+              <input id="cfg-peso" type="number" min="0" step="0.01" value="0.6">
+              <span class="input-suffix">KG</span>
+            </div>
+          </div>
+
+          <div class="input-field">
+            <label for="cfg-envioKg">Envío base / KG ($)</label>
+            <div class="input-wrapper">
+              <span class="input-prefix">$</span>
+              <input id="cfg-envioKg" type="number" min="0" step="0.01" value="9.50">
+            </div>
+          </div>
+
+          <div class="input-field">
+            <label for="cfg-reempaque">Reempaque base ($)</label>
+            <div class="input-wrapper">
+              <span class="input-prefix">$</span>
+              <input id="cfg-reempaque" type="number" min="0" step="0.01" value="1.00">
+            </div>
+          </div>
+
+          <div class="input-field">
+            <label for="cfg-tc">T.C. base (S/)</label>
+            <div class="input-wrapper">
+              <span class="input-prefix">S/</span>
+              <input id="cfg-tc" type="number" min="0" step="0.01" value="3.40">
+            </div>
+          </div>
+
+          <div class="input-field input-field-full">
+            <label for="cfg-extras">Costos extras base locales (S/)</label>
+            <div class="input-wrapper">
+              <span class="input-prefix">S/</span>
+              <input id="cfg-extras" type="number" min="0" step="0.01" value="15.00">
+            </div>
+            <span class="input-hint">Delivery local, caja de envío o bolsa</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" id="btn-guardar-config" class="btn btn-secondary">
+          <span>💾 Guardar como Base</span>
+        </button>
+        <button type="button" id="btn-restaurar-fabrica" class="btn btn-tertiary">
+          <span>🔄 Restaurar Fábrica</span>
         </button>
       </div>
     </div>
