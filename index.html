@@ -53,7 +53,7 @@
             <span class="section-icon">📦</span>
             <h2 class="section-title">NUEVA COTIZACIÓN</h2>
           </div>
-          <span class="section-tag">Courier Aéreo</span>
+          <span class="section-arrow-indicator" aria-hidden="true">›</span>
         </div>
 
         <!-- Bloque 1: PRODUCTO Y COMPRA USA -->
@@ -130,11 +130,11 @@
           </div>
         </div>
 
-        <!-- Bloque 3: VENTA Y GASTOS LOCALES -->
+        <!-- Bloque 3: COSTOS EN PERÚ -->
         <div class="form-block">
           <div class="block-header">
             <span class="block-number">3</span>
-            <h3 class="block-title">VENTA Y GASTOS LOCALES</h3>
+            <h3 class="block-title">COSTOS EN PERÚ</h3>
           </div>
           <div class="input-grid">
             <div class="input-field">
@@ -157,27 +157,30 @@
           </div>
         </div>
 
-        <!-- Botones de Acción -->
-        <div class="action-buttons-grid">
-          <button id="btn-calcular" type="button" class="btn btn-secondary">
+        <!-- Botón Principal: CALCULAR COSTOS (Grande, Ancho Completo) -->
+        <div class="form-actions-wrapper">
+          <button id="btn-calcular" type="button" class="btn btn-calcular-hero">
             <span class="btn-icon">⚡</span>
-            <span>CALCULAR</span>
+            <span>CALCULAR COSTOS</span>
           </button>
 
-          <button id="btn-guardar" type="button" class="btn btn-primary">
-            <span class="btn-icon">💾</span>
-            <span>GUARDAR COTIZACIÓN</span>
-          </button>
+          <!-- Acciones Secundarias -->
+          <div class="action-buttons-grid">
+            <button id="btn-guardar" type="button" class="btn btn-primary btn-grid-span">
+              <span class="btn-icon">💾</span>
+              <span>GUARDAR COTIZACIÓN</span>
+            </button>
 
-          <button id="btn-nuevo" type="button" class="btn btn-tertiary">
-            <span class="btn-icon">✨</span>
-            <span>NUEVA COTIZACIÓN</span>
-          </button>
+            <button id="btn-nuevo" type="button" class="btn btn-tertiary">
+              <span class="btn-icon">✨</span>
+              <span>NUEVA COTIZACIÓN</span>
+            </button>
 
-          <button id="btn-limpiar" type="button" class="btn btn-tertiary">
-            <span class="btn-icon">🧹</span>
-            <span>LIMPIAR DATOS</span>
-          </button>
+            <button id="btn-limpiar" type="button" class="btn btn-tertiary">
+              <span class="btn-icon">🧹</span>
+              <span>LIMPIAR DATOS</span>
+            </button>
+          </div>
         </div>
       </section>
 
