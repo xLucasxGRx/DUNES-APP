@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#090a0f">
+  <meta name="description" content="DUNES PARFUMS - Calculadora y cotizador profesional de importación de perfumes USA a Perú por Courier.">
+  
+  <!-- iOS PWA Meta Tags -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="DUNES PARFUMS">
+  <link rel="apple-touch-icon" href="./assets/apple-touch-icon.png">
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" type="image/png" sizes="192x192" href="./assets/icon-192.png">
+
+  <title>DUNES PARFUMS — Cotizador Courier USA → Perú</title>
+
+  <!-- Google Fonts: Cinzel (Títulos de Lujo) y Outfit (Números y Textos) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+
+  <div class="app-container">
+    <!-- Header Principal -->
+    <header class="app-header">
+      <div class="brand-badge">
+        <span class="brand-crest">🌙</span>
+        <div class="brand-text">
+          <h1 class="brand-title">DUNES PARFUMS</h1>
+          <p class="brand-subtitle">Cotizador Courier USA 🇺🇸 → Perú 🇵🇪</p>
+        </div>
+      </div>
+      <div id="pwa-status" class="status-indicator" title="Estado de la aplicación">
+        <span class="status-pulse"></span>
+        <span class="status-label">Online</span>
+      </div>
+    </header>
+
+    <main class="app-main">
+      <!-- Sección Formulario: NUEVA COTIZACIÓN -->
+      <section class="section-card form-section" id="seccion-formulario">
+        <div class="section-header">
+          <div class="section-title-wrapper">
+            <span class="section-icon">📦</span>
+            <h2 class="section-title">NUEVA COTIZACIÓN</h2>
+          </div>
+          <span class="section-tag">Courier Aéreo</span>
+        </div>
+
+        <!-- Bloque 1: PRODUCTO Y COMPRA USA -->
+        <div class="form-block">
+          <div class="block-header">
+            <span class="block-number">1</span>
+            <h3 class="block-title">PRODUCTO Y COMPRA USA</h3>
+          </div>
+          <div class="input-grid">
+            <div class="input-field input-field-full">
+              <label for="producto">Producto / Perfume</label>
+              <div class="input-wrapper">
+                <span class="input-icon">🧴</span>
+                <input id="producto" type="text" placeholder="Ej: Mandarin Sky 100ml" autocomplete="off">
+              </div>
+            </div>
+
+            <div class="input-field">
+              <label for="cantidad">Cantidad (Uds)</label>
+              <div class="input-wrapper">
+                <span class="input-icon">🔢</span>
+                <input id="cantidad" type="number" min="1" step="1" value="1">
+              </div>
+            </div>
+
+            <div class="input-field">
+              <label for="precioUSA">Precio unitario USA ($)</label>
+              <div class="input-wrapper">
+                <span class="input-prefix">$</span>
+                <input id="precioUSA" type="number" min="0" step="0.01" placeholder="33.50">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bloque 2: FLETE O COSTO DE ENVÍO -->
+        <div class="form-block">
+          <div class="block-header">
+            <span class="block-number">2</span>
+            <h3 class="block-title">FLETE O COSTO DE ENVÍO</h3>
+          </div>
+          <div class="input-grid input-grid-4">
+            <div class="input-field">
+              <label for="peso">Peso perfume (KG)</label>
+              <div class="input-wrapper">
+                <input id="peso" type="number" min="0" step="0.01" value="0.6">
+                <span class="input-suffix">KG</span>
+              </div>
+            </div>
+
+            <div class="input-field">
+              <label for="envioKg">Costo envío / KG ($)</label>
+              <div class="input-wrapper">
+                <span class="input-prefix">$</span>
+                <input id="envioKg" type="number" min="0" step="0.01" value="9.50">
+              </div>
+            </div>
+
+            <div class="input-field">
+              <label for="reempaque">Reempaque ($)</label>
+              <div class="input-wrapper">
+                <span class="input-prefix">$</span>
+                <input id="reempaque" type="number" min="0" step="0.01" value="1.00">
+              </div>
+            </div>
+
+            <div class="input-field">
+              <label for="tc">Tipo de cambio (S/)</label>
+              <div class="input-wrapper">
+                <span class="input-prefix">S/</span>
+                <input id="tc" type="number" min="0" step="0.01" value="3.40">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bloque 3: VENTA Y GASTOS LOCALES -->
+        <div class="form-block">
+          <div class="block-header">
+            <span class="block-number">3</span>
+            <h3 class="block-title">VENTA Y GASTOS LOCALES</h3>
+          </div>
+          <div class="input-grid">
+            <div class="input-field">
+              <label for="extras">Costos extras locales (S/)</label>
+              <div class="input-wrapper">
+                <span class="input-prefix">S/</span>
+                <input id="extras" type="number" min="0" step="0.01" value="15.00">
+              </div>
+              <span class="input-hint">Delivery, caja, decant de regalo</span>
+            </div>
+
+            <div class="input-field">
+              <label for="venta">Precio de venta público (S/)</label>
+              <div class="input-wrapper input-highlight">
+                <span class="input-prefix">S/</span>
+                <input id="venta" type="number" min="0" step="0.01" placeholder="175.00">
+              </div>
+              <span class="input-hint">Precio final ofrecido al cliente</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Botones de Acción -->
+        <div class="action-buttons-grid">
+          <button id="btn-calcular" type="button" class="btn btn-secondary">
+            <span class="btn-icon">⚡</span>
+            <span>CALCULAR</span>
+          </button>
+
+          <button id="btn-guardar" type="button" class="btn btn-primary">
+            <span class="btn-icon">💾</span>
+            <span>GUARDAR COTIZACIÓN</span>
+          </button>
+
+          <button id="btn-nuevo" type="button" class="btn btn-tertiary">
+            <span class="btn-icon">✨</span>
+            <span>NUEVA COTIZACIÓN</span>
+          </button>
+
+          <button id="btn-limpiar" type="button" class="btn btn-tertiary">
+            <span class="btn-icon">🧹</span>
+            <span>LIMPIAR DATOS</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- SECCIÓN DE RESULTADOS: Tarjetas Grandes -->
+      <section class="results-container" id="seccion-resultados">
+        <!-- Tarjeta 1: COSTO PUESTO EN PERÚ -->
+        <div class="result-card card-costo">
+          <div class="card-top">
+            <div class="card-badge">Costos Courier</div>
+            <span class="card-icon">🇵🇪</span>
+          </div>
+          <h3 class="card-title">COSTO PUESTO EN PERÚ</h3>
+
+          <div class="costo-breakdown">
+            <div class="breakdown-row">
+              <span class="row-label">Total USA:</span>
+              <b class="row-val" id="res-total-usa">$0.00</b>
+            </div>
+            <div class="breakdown-row">
+              <span class="row-label">Flete (Peso × Envío):</span>
+              <b class="row-val" id="res-flete">$0.00</b>
+            </div>
+            <div class="breakdown-row">
+              <span class="row-label">Reempaque:</span>
+              <b class="row-val" id="res-reempaque">$0.00</b>
+            </div>
+            <div class="breakdown-row breakdown-subtotal">
+              <span class="row-label">Total USD (USA + Envío):</span>
+              <b class="row-val highlight-usd" id="res-total-usd">$0.00</b>
+            </div>
+          </div>
+
+          <div class="costo-hero">
+            <span class="hero-label">Costo puesto en Perú (C/U)</span>
+            <div class="hero-amount-group">
+              <span class="hero-currency">S/</span>
+              <span class="hero-number" id="res-costo-peru">0.00</span>
+            </div>
+            <span class="hero-subtext" id="res-costo-total-soles">Total lote: S/ 0.00</span>
+          </div>
+        </div>
+
+        <!-- Tarjeta 2: GANANCIA -->
+        <div class="result-card card-ganancia">
+          <div class="card-top">
+            <div class="card-badge badge-profit">Rentabilidad Neta</div>
+            <span class="card-icon">📈</span>
+          </div>
+          <h3 class="card-title">GANANCIA</h3>
+
+          <div class="ganancia-grid">
+            <div class="ganancia-stat">
+              <span class="stat-label">Ganancia por unidad</span>
+              <div class="stat-value-wrap positive" id="wrap-ganancia-unidad">
+                <span class="stat-curr">S/</span>
+                <b class="stat-val" id="res-ganancia-unidad">0.00</b>
+              </div>
+            </div>
+
+            <div class="ganancia-stat">
+              <span class="stat-label">Ganancia total lote</span>
+              <div class="stat-value-wrap positive" id="wrap-ganancia-total">
+                <span class="stat-curr">S/</span>
+                <b class="stat-val" id="res-ganancia-total">0.00</b>
+              </div>
+            </div>
+          </div>
+
+          <div class="margen-container">
+            <div class="margen-label-row">
+              <span>Margen sobre venta:</span>
+              <b id="res-margen" class="margen-pill">0.0%</b>
+            </div>
+            <div class="margen-progress-bar">
+              <div id="margen-bar-fill" class="margen-fill" style="width: 0%;"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECCIÓN HISTORIAL: COTIZACIONES GUARDADAS -->
+      <section class="section-card history-section" id="seccion-historial">
+        <div class="section-header">
+          <div class="section-title-wrapper">
+            <span class="section-icon">📋</span>
+            <h2 class="section-title">COTIZACIONES GUARDADAS</h2>
+          </div>
+          <span class="history-counter" id="historial-contador">0 guardadas</span>
+        </div>
+
+        <!-- Lista de Tarjetas de Historial -->
+        <div id="historial-lista" class="historial-cards-grid">
+          <!-- Se inyecta dinámicamente con app.js -->
+        </div>
+
+        <!-- Botón de Borrado de Historial -->
+        <div class="history-actions" id="historial-actions" style="display: none;">
+          <button id="btn-borrar-historial" type="button" class="btn btn-danger">
+            <span class="btn-icon">🗑️</span>
+            <span>Borrar todo el historial</span>
+          </button>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer Discreto -->
+    <footer class="app-footer">
+      <p>DUNES PARFUMS &copy; 2026 &bull; Importación Courier USA ✈️ Perú</p>
+    </footer>
+  </div>
+
+  <!-- MODAL DE DETALLE COMPLETO DE COTIZACIÓN -->
+  <div id="modal-detalle" class="modal-backdrop" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="modal-tag">Desglose Detallado</span>
+          <h3 id="modal-producto" class="modal-title">Dior Sauvage</h3>
+          <span id="modal-fecha" class="modal-date">05/09/2026 01:30</span>
+        </div>
+        <button id="btn-cerrar-modal" class="modal-close-btn" aria-label="Cerrar modal">&times;</button>
+      </div>
+
+      <div class="modal-body" id="modal-contenido">
+        <!-- Generado dinámicamente -->
+      </div>
+
+      <div class="modal-footer">
+        <button id="btn-cargar-modal" class="btn btn-secondary">
+          <span>Editar en Cotizador</span>
+        </button>
+        <button id="btn-cerrar-modal-bottom" class="btn btn-tertiary">
+          <span>Cerrar</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Contenedor flotante de Avisos Toast -->
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <!-- Scripts -->
+  <script src="./js/calculator.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
