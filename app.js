@@ -1,13 +1,28 @@
 /**
  * ==========================================================================
  * DUNES PARFUMS — Controlador Principal de la Aplicación
- * Lógica de cotizaciones, persistencia en LocalStorage y soporte PWA
+ * Versión Mejorada: Memoria Inteligente, Nombre Dinámico, Configuración Base
+ * y Persistencia Total PWA / Offline
  * ==========================================================================
  */
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Clave para almacenamiento local
-  const STORAGE_KEY = 'dunes_cotizaciones_v1';
+  // Claves de Almacenamiento Local
+  const STORAGE_KEYS = {
+    HISTORY: 'dunes_cotizaciones_v1',
+    BASE_CONFIG: 'dunes_config_base_v1',
+    LAST_INPUTS: 'dunes_last_inputs_v1'
+  };
+
+  // Valores de Fábrica Iniciales (DUNES PARFUMS)
+  const FACTORY_DEFAULTS = {
+    cantidad: 1,
+    peso: 0.6,
+    envioKg: 9.50,
+    reempaque: 1.00,
+    tc: 3.40,
+    extras: 15.00
+  };
 
   // Referencias a los inputs del formulario
   const inputs = {
@@ -20,6 +35,26 @@ document.addEventListener('DOMContentLoaded', () => {
     tc: document.getElementById('tc'),
     extras: document.getElementById('extras'),
     venta: document.getElementById('venta')
+  };
+
+  // Referencias a inputs de Configuración de Costos
+  const configInputs = {
+    peso: document.getElementById('cfg-peso'),
+    envioKg: document.getElementById('cfg-envioKg'),
+    reempaque: document.getElementById('cfg-reempaque'),
+    tc: document.getElementById('cfg-tc'),
+    extras: document.getElementById('cfg-extras')
+  };
+
+  // Referencias a elementos dinámicos de nombres y alertas
+  const labels = {
+    nombreCosto: document.getElementById('res-nombre-costo'),
+    nombreGanancia: document.getElementById('res-nombre-ganancia'),
+    alertCosto: document.getElementById('alert-costo'),
+    alertGanancia: document.getElementById('alert-ganancia'),
+    boxBreakdown: document.getElementById('box-costo-breakdown'),
+    boxGananciaGrid: document.getElementById('box-ganancia-grid'),
+    boxMargenContainer: document.getElementById('box-margen-container')
   };
 
   // Referencias a elementos de resultados
@@ -38,12 +73,21 @@ document.addEventListener('DOMContentLoaded', () => {
     wrapGananciaTotal: document.getElementById('wrap-ganancia-total')
   };
 
-  // Referencias a botones de acción
+  // Referencias a botones principales
   const btnCalcular = document.getElementById('btn-calcular');
   const btnGuardar = document.getElementById('btn-guardar');
   const btnNuevo = document.getElementById('btn-nuevo');
   const btnLimpiar = document.getElementById('btn-limpiar');
   const btnBorrarHistorial = document.getElementById('btn-borrar-historial');
+
+  // Referencias de sección Configuración
+  const btnToggleConfig = document.getElementById('btn-toggle-config');
+  const configToggleBtn = document.getElementById('config-toggle-btn');
+  const configToggleText = document.getElementById('config-toggle-text');
+  const configChevron = document.getElementById('config-chevron');
+  const configBody = document.getElementById('config-body');
+  const btnGuardarConfig = document.getElementById('btn-guardar-config');
+  const btnRestaurarFabrica = document.getElementById('btn-restaurar-fabrica');
 
   // Referencias de Historial
   const historialLista = document.getElementById('historial-lista');
@@ -59,11 +103,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnCerrarModalBottom = document.getElementById('btn-cerrar-modal-bottom');
   const btnCargarModal = document.getElementById('btn-cargar-modal');
 
-  // Contenedor de Toast
+  // Contenedor de Toast y PWA Status
   const toastContainer = document.getElementById('toast-container');
   const pwaStatus = document.getElementById('pwa-status');
 
-  // Estado en memoria de la cotización actual
+  // Estado en memoria
   let currentCalculations = null;
   let currentModalItem = null;
 
@@ -73,29 +117,164 @@ document.addEventListener('DOMContentLoaded', () => {
   const formatNum = (num) => Number(num || 0).toFixed(2);
 
   /**
-   * Obtiene los valores actuales del formulario
+   * ========================================================================
+   * GESTIÓN DE MEMORIA Y VALORES PREDETERMINADOS INTELIGENTES
+   * ========================================================================
+   */
+
+  /**
+   * Obtiene la configuración base activa (Guardada o Fábrica)
+   */
+  function obtenerConfigBase() {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.BASE_CONFIG);
+      if (saved) {
+        return { ...FACTORY_DEFAULTS, ...JSON.parse(saved) };
+      }
+    } catch (e) {
+      console.warn('Error al leer configuración base', e);
+    }
+    return { ...FACTORY_DEFAULTS };
+  }
+
+  /**
+   * Obtiene los últimos valores utilizados por el usuario
+   */
+  function obtenerUltimosValores() {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.LAST_INPUTS);
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {
+      console.warn('Error al leer últimos valores', e);
+    }
+    return null;
+  }
+
+  /**
+   * Guarda automáticamente los valores cambiados en tiempo real
+   */
+  function autoGuardarValoresUsuario() {
+    try {
+      const datosParaGuardar = {
+        peso: Math.max(0, parseFloat(inputs.peso.value) || 0),
+        envioKg: Math.max(0, parseFloat(inputs.envioKg.value) || 0),
+        reempaque: Math.max(0, parseFloat(inputs.reempaque.value) || 0),
+        tc: Math.max(0, parseFloat(inputs.tc.value) || 0),
+        extras: Math.max(0, parseFloat(inputs.extras.value) || 0)
+      };
+      localStorage.setItem(STORAGE_KEYS.LAST_INPUTS, JSON.stringify(datosParaGuardar));
+    } catch (e) {
+      console.warn('Error al autoguardar valores', e);
+    }
+  }
+
+  /**
+   * Inicializa los campos de formulario según la regla de prioridad:
+   * 1. Últimos valores usados
+   * 2. Configuración base guardada
+   * 3. Valores de fábrica DUNES
+   */
+  function cargarValoresIniciales() {
+    const configBase = obtenerConfigBase();
+    const ultimosValores = obtenerUltimosValores();
+
+    // Determinar valores efectivos para el cotizador
+    const valoresEfectivos = ultimosValores
+      ? { ...configBase, ...ultimosValores }
+      : configBase;
+
+    inputs.cantidad.value = 1;
+    inputs.peso.value = valoresEfectivos.peso;
+    inputs.envioKg.value = valoresEfectivos.envioKg;
+    inputs.reempaque.value = valoresEfectivos.reempaque;
+    inputs.tc.value = valoresEfectivos.tc;
+    inputs.extras.value = valoresEfectivos.extras;
+
+    // Sincronizar también los inputs de la sección de Configuración Base
+    configInputs.peso.value = configBase.peso;
+    configInputs.envioKg.value = configBase.envioKg;
+    configInputs.reempaque.value = configBase.reempaque;
+    configInputs.tc.value = configBase.tc;
+    configInputs.extras.value = configBase.extras;
+  }
+
+  /**
+   * ========================================================================
+   * SINCRONIZACIÓN DINÁMICA DEL NOMBRE DEL PERFUME
+   * ========================================================================
+   */
+  function sincronizarNombrePerfume() {
+    const nombre = inputs.producto.value.trim();
+    const textoMostrar = nombre ? nombre : 'Perfume no especificado';
+
+    if (labels.nombreCosto) {
+      labels.nombreCosto.textContent = textoMostrar;
+      labels.nombreCosto.style.color = nombre ? 'var(--gold-light)' : 'var(--text-muted)';
+    }
+
+    if (labels.nombreGanancia) {
+      labels.nombreGanancia.textContent = textoMostrar;
+      labels.nombreGanancia.style.color = nombre ? 'var(--gold-light)' : 'var(--text-muted)';
+    }
+  }
+
+  /**
+   * ========================================================================
+   * MOTOR DE CÁLCULO Y VALIDACIONES
+   * ========================================================================
    */
   function getFormValues() {
     return {
       producto: inputs.producto.value.trim(),
       cantidad: Math.max(1, parseInt(inputs.cantidad.value, 10) || 1),
-      precioUSA: parseFloat(inputs.precioUSA.value) || 0,
-      peso: parseFloat(inputs.peso.value) || 0,
-      envioKg: parseFloat(inputs.envioKg.value) || 0,
-      reempaque: parseFloat(inputs.reempaque.value) || 0,
-      tc: parseFloat(inputs.tc.value) || 0,
-      extras: parseFloat(inputs.extras.value) || 0,
-      venta: parseFloat(inputs.venta.value) || 0
+      precioUSA: Math.max(0, parseFloat(inputs.precioUSA.value) || 0),
+      peso: Math.max(0, parseFloat(inputs.peso.value) || 0),
+      envioKg: Math.max(0, parseFloat(inputs.envioKg.value) || 0),
+      reempaque: Math.max(0, parseFloat(inputs.reempaque.value) || 0),
+      tc: Math.max(0, parseFloat(inputs.tc.value) || 0),
+      extras: Math.max(0, parseFloat(inputs.extras.value) || 0),
+      venta: Math.max(0, parseFloat(inputs.venta.value) || 0)
     };
   }
 
-  /**
-   * Ejecuta el cálculo y actualiza las tarjetas de resultados
-   */
   function ejecutarCalculo() {
-    const vals = getFormValues();
+    sincronizarNombrePerfume();
+    autoGuardarValoresUsuario();
 
-    // Motor de cálculo garantizado por tests unitarios
+    const vals = getFormValues();
+    const tienePrecioUSA = vals.precioUSA > 0;
+    const tienePrecioVenta = vals.venta > 0;
+
+    // Validación 1: Precio USA vacío o 0
+    if (!tienePrecioUSA) {
+      labels.alertCosto.style.display = 'block';
+      labels.boxBreakdown.style.opacity = '0.4';
+      labels.alertGanancia.style.display = 'block';
+      labels.alertGanancia.textContent = '⚠️ Ingresa el precio USA para calcular';
+      labels.boxGananciaGrid.style.opacity = '0.4';
+
+      outputs.totalUSA.textContent = '$ 0.00';
+      outputs.flete.textContent = '$ 0.00';
+      outputs.reempaque.textContent = '$ 0.00';
+      outputs.totalUSD.textContent = '$ 0.00';
+      outputs.costoPeru.textContent = '0.00';
+      outputs.costoTotalSoles.textContent = 'Total lote: S/ 0.00';
+      outputs.gananciaUnidad.textContent = '0.00';
+      outputs.gananciaTotal.textContent = '0.00';
+      outputs.margen.textContent = '0.0%';
+      outputs.margenBar.style.width = '0%';
+
+      currentCalculations = { ...vals, totalUSA: 0, flete: 0, reempaque: 0, totalEnvio: 0, precioTotalUSD: 0, precioTotalSoles: 0, costoUnidad: 0, gananciaUnidad: 0, gananciaTotal: 0, margen: 0 };
+      return currentCalculations;
+    }
+
+    // Si tiene Precio USA, calcular Costo Puesto en Perú
+    labels.alertCosto.style.display = 'none';
+    labels.boxBreakdown.style.opacity = '1';
+
+    // Ejecución con motor matemático certificado por pruebas unitarias
     const res = window.calculateDunesQuotation(vals);
     currentCalculations = { ...vals, ...res };
 
@@ -107,33 +286,48 @@ document.addEventListener('DOMContentLoaded', () => {
     outputs.costoPeru.textContent = formatNum(res.costoUnidad);
     outputs.costoTotalSoles.textContent = `Total lote: ${formatPEN(res.precioTotalSoles)}`;
 
-    // Actualizar Tarjeta 2: Ganancia
-    outputs.gananciaUnidad.textContent = formatNum(res.gananciaUnidad);
-    outputs.gananciaTotal.textContent = formatNum(res.gananciaTotal);
-    outputs.margen.textContent = `${res.margen.toFixed(1)}%`;
+    // Validación 2: Precio de Venta
+    if (!tienePrecioVenta) {
+      labels.alertGanancia.style.display = 'block';
+      labels.alertGanancia.textContent = 'ℹ️ Ingresa el precio de venta para ver tu ganancia';
+      labels.boxGananciaGrid.style.opacity = '0.4';
+      labels.boxMargenContainer.style.opacity = '0.4';
 
-    // Clases visuales de rentabilidad (Verde si es positivo, Rojo si es negativo)
-    const esPositiva = res.gananciaUnidad >= 0;
-    
-    outputs.wrapGananciaUnidad.className = `stat-value-wrap ${esPositiva ? 'positive' : 'negative'}`;
-    outputs.wrapGananciaTotal.className = `stat-value-wrap ${esPositiva ? 'positive' : 'negative'}`;
-
-    // Barra de margen (tope en 100%)
-    const margenClamped = Math.max(0, Math.min(100, res.margen));
-    outputs.margenBar.style.width = `${margenClamped}%`;
-    if (!esPositiva) {
-      outputs.margenBar.style.background = 'linear-gradient(90deg, #ef4444, #f87171)';
-      outputs.margen.style.color = '#ef4444';
+      outputs.gananciaUnidad.textContent = '0.00';
+      outputs.gananciaTotal.textContent = '0.00';
+      outputs.margen.textContent = '0.0%';
+      outputs.margenBar.style.width = '0%';
     } else {
-      outputs.margenBar.style.background = 'linear-gradient(90deg, #10b981, #34d399)';
-      outputs.margen.style.color = '#10b981';
+      labels.alertGanancia.style.display = 'none';
+      labels.boxGananciaGrid.style.opacity = '1';
+      labels.boxMargenContainer.style.opacity = '1';
+
+      outputs.gananciaUnidad.textContent = formatNum(res.gananciaUnidad);
+      outputs.gananciaTotal.textContent = formatNum(res.gananciaTotal);
+      outputs.margen.textContent = `${res.margen.toFixed(1)}%`;
+
+      const esPositiva = res.gananciaUnidad >= 0;
+      outputs.wrapGananciaUnidad.className = `stat-value-wrap ${esPositiva ? 'positive' : 'negative'}`;
+      outputs.wrapGananciaTotal.className = `stat-value-wrap ${esPositiva ? 'positive' : 'negative'}`;
+
+      const margenClamped = Math.max(0, Math.min(100, res.margen));
+      outputs.margenBar.style.width = `${margenClamped}%`;
+      if (!esPositiva) {
+        outputs.margenBar.style.background = 'linear-gradient(90deg, #ef4444, #f87171)';
+        outputs.margen.style.color = '#ef4444';
+      } else {
+        outputs.margenBar.style.background = 'linear-gradient(90deg, #10b981, #34d399)';
+        outputs.margen.style.color = '#10b981';
+      }
     }
 
     return currentCalculations;
   }
 
   /**
-   * Muestra notificación Toast flotante
+   * ========================================================================
+   * NOTIFICACIONES TOAST
+   * ========================================================================
    */
   function showToast(message, type = 'success') {
     if (!toastContainer) return;
@@ -150,34 +344,41 @@ document.addEventListener('DOMContentLoaded', () => {
       toast.style.opacity = '0';
       toast.style.transform = 'translateY(-10px)';
       setTimeout(() => toast.remove(), 300);
-    }, 3200);
+    }, 3000);
   }
 
   /**
-   * Almacenamiento Local (LocalStorage)
+   * ========================================================================
+   * HISTORIAL LOCAL (PERSISTENCIA Y DETALLE)
+   * ========================================================================
    */
   function obtenerHistorial() {
     try {
-      const data = localStorage.getItem(STORAGE_KEY);
+      const data = localStorage.getItem(STORAGE_KEYS.HISTORY);
       return data ? JSON.parse(data) : [];
     } catch (e) {
-      console.error('Error al leer historial de LocalStorage', e);
+      console.error('Error al leer historial', e);
       return [];
     }
   }
 
   function guardarHistorial(lista) {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(lista));
+      localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(lista));
     } catch (e) {
-      console.error('Error al guardar historial en LocalStorage', e);
+      console.error('Error al guardar historial', e);
     }
   }
 
-  /**
-   * Guarda la cotización actual en el historial
-   */
   function guardarCotizacionActual() {
+    const vals = getFormValues();
+
+    if (!vals.precioUSA || vals.precioUSA <= 0) {
+      showToast('Ingresa el precio USA para cotizar', 'info');
+      inputs.precioUSA.focus();
+      return;
+    }
+
     const calc = ejecutarCalculo();
     const nombre = calc.producto || 'Perfume Importado';
 
@@ -200,16 +401,13 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const historial = obtenerHistorial();
-    historial.unshift(nuevoItem); // Agregar al inicio
+    historial.unshift(nuevoItem);
     guardarHistorial(historial);
 
     renderizarHistorial();
     showToast(`"${nombre}" guardado en historial`);
   }
 
-  /**
-   * Renderiza la lista de tarjetas de historial
-   */
   function renderizarHistorial() {
     const historial = obtenerHistorial();
     historialContador.textContent = `${historial.length} guardada${historial.length === 1 ? '' : 's'}`;
@@ -237,7 +435,7 @@ document.addEventListener('DOMContentLoaded', () => {
       card.innerHTML = `
         <div class="quote-card-header">
           <div>
-            <h4 class="quote-card-title">${escapeHTML(item.producto)}</h4>
+            <h4 class="quote-card-title">🧴 ${escapeHTML(item.producto)}</h4>
             <span class="quote-card-meta">📅 ${item.fecha}</span>
           </div>
           <span class="quote-badge-qty">${item.cantidad} ud${item.cantidad > 1 ? 's' : ''}</span>
@@ -278,7 +476,6 @@ document.addEventListener('DOMContentLoaded', () => {
       historialLista.appendChild(card);
     });
 
-    // Asignar eventos a los botones de cada tarjeta
     historialLista.querySelectorAll('.btn-ver-detalle').forEach((btn) => {
       btn.addEventListener('click', (e) => {
         const id = parseInt(e.currentTarget.getAttribute('data-id'), 10);
@@ -294,9 +491,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  /**
-   * Elimina una cotización individual
-   */
   function eliminarCotizacion(id) {
     let historial = obtenerHistorial();
     const item = historial.find((i) => i.id === id);
@@ -308,19 +502,18 @@ document.addEventListener('DOMContentLoaded', () => {
     showToast(`Eliminado: ${nombre}`, 'info');
   }
 
-  /**
-   * Borra todo el historial
-   */
   function borrarTodoHistorial() {
     if (confirm('¿Estás seguro de que deseas borrar todas las cotizaciones guardadas?')) {
-      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(STORAGE_KEYS.HISTORY);
       renderizarHistorial();
       showToast('Historial completo eliminado', 'info');
     }
   }
 
   /**
-   * Modal de Detalle
+   * ========================================================================
+   * MODAL DE DETALLE COMPLETO
+   * ========================================================================
    */
   function abrirModalDetalle(id) {
     const historial = obtenerHistorial();
@@ -328,7 +521,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!item) return;
 
     currentModalItem = item;
-    modalProducto.textContent = item.producto;
+    modalProducto.textContent = `🧴 ${item.producto}`;
     modalFecha.textContent = `Guardado: ${item.fecha}`;
 
     const esPositiva = (item.gananciaUnidad >= 0);
@@ -336,6 +529,10 @@ document.addEventListener('DOMContentLoaded', () => {
     modalContenido.innerHTML = `
       <table class="detail-table">
         <tbody>
+          <tr>
+            <td>Perfume:</td>
+            <td style="color:var(--gold-light);">${escapeHTML(item.producto)}</td>
+          </tr>
           <tr>
             <td>Cantidad importada:</td>
             <td>${item.cantidad} unidad${item.cantidad > 1 ? 'es' : ''}</td>
@@ -424,9 +621,6 @@ document.addEventListener('DOMContentLoaded', () => {
     currentModalItem = null;
   }
 
-  /**
-   * Carga los datos del modal en el formulario principal
-   */
   function cargarItemEnFormulario() {
     if (!currentModalItem) return;
     inputs.producto.value = currentModalItem.producto || '';
@@ -442,19 +636,32 @@ document.addEventListener('DOMContentLoaded', () => {
     ejecutarCalculo();
     cerrarModal();
 
-    // Scroll suave al formulario
     document.getElementById('seccion-formulario').scrollIntoView({ behavior: 'smooth' });
     inputs.producto.focus();
     showToast('Cotización cargada en el formulario');
   }
 
   /**
-   * Botón NUEVA COTIZACIÓN
+   * ========================================================================
+   * BOTONES: NUEVA COTIZACIÓN Y LIMPIAR DATOS
+   * ========================================================================
    */
   function nuevaCotizacion() {
     inputs.producto.value = '';
     inputs.precioUSA.value = '';
     inputs.venta.value = '';
+    inputs.cantidad.value = '1';
+
+    // Cargar la configuración base activa para este nuevo cálculo
+    const configBase = obtenerConfigBase();
+    const ultimos = obtenerUltimosValores() || configBase;
+
+    inputs.peso.value = ultimos.peso;
+    inputs.envioKg.value = ultimos.envioKg;
+    inputs.reempaque.value = ultimos.reempaque;
+    inputs.tc.value = ultimos.tc;
+    inputs.extras.value = ultimos.extras;
+
     ejecutarCalculo();
 
     document.getElementById('seccion-formulario').scrollIntoView({ behavior: 'smooth' });
@@ -462,26 +669,91 @@ document.addEventListener('DOMContentLoaded', () => {
     showToast('Listo para nueva cotización');
   }
 
-  /**
-   * Botón LIMPIAR DATOS
-   */
   function limpiarDatos() {
     inputs.producto.value = '';
     inputs.cantidad.value = '1';
     inputs.precioUSA.value = '';
-    inputs.peso.value = '0.6';
-    inputs.envioKg.value = '9.50';
-    inputs.reempaque.value = '1.00';
-    inputs.tc.value = '3.40';
-    inputs.extras.value = '15.00';
     inputs.venta.value = '';
 
+    // Cargar la configuración base
+    const configBase = obtenerConfigBase();
+    inputs.peso.value = configBase.peso;
+    inputs.envioKg.value = configBase.envioKg;
+    inputs.reempaque.value = configBase.reempaque;
+    inputs.tc.value = configBase.tc;
+    inputs.extras.value = configBase.extras;
+
+    // Actualizar memoria
+    autoGuardarValoresUsuario();
     ejecutarCalculo();
-    showToast('Valores restaurados por defecto', 'info');
+    showToast('Valores restaurados según configuración base', 'info');
   }
 
   /**
-   * Escapar HTML para seguridad en historial
+   * ========================================================================
+   * SECCIÓN CONFIGURACIÓN DE COSTOS (ACCORDION & ACCIONES)
+   * ========================================================================
+   */
+  function toggleConfiguracion() {
+    const estaVisible = configBody.style.display !== 'none';
+    if (estaVisible) {
+      configBody.style.display = 'none';
+      configToggleText.textContent = 'Mostrar';
+      configToggleBtn.classList.remove('is-open');
+    } else {
+      configBody.style.display = 'flex';
+      configToggleText.textContent = 'Ocultar';
+      configToggleBtn.classList.add('is-open');
+    }
+  }
+
+  function guardarConfiguracionBase() {
+    const nuevaConfig = {
+      peso: Math.max(0, parseFloat(configInputs.peso.value) || 0.6),
+      envioKg: Math.max(0, parseFloat(configInputs.envioKg.value) || 9.50),
+      reempaque: Math.max(0, parseFloat(configInputs.reempaque.value) || 1.00),
+      tc: Math.max(0, parseFloat(configInputs.tc.value) || 3.40),
+      extras: Math.max(0, parseFloat(configInputs.extras.value) || 15.00)
+    };
+
+    localStorage.setItem(STORAGE_KEYS.BASE_CONFIG, JSON.stringify(nuevaConfig));
+
+    // Si el usuario lo desea, aplicar de inmediato al formulario actual
+    inputs.peso.value = nuevaConfig.peso;
+    inputs.envioKg.value = nuevaConfig.envioKg;
+    inputs.reempaque.value = nuevaConfig.reempaque;
+    inputs.tc.value = nuevaConfig.tc;
+    inputs.extras.value = nuevaConfig.extras;
+
+    autoGuardarValoresUsuario();
+    ejecutarCalculo();
+    showToast('Valores base de importación guardados exitosamente');
+  }
+
+  function restaurarValoresFabrica() {
+    if (confirm('¿Restablecer los valores base a la configuración de fábrica DUNES?')) {
+      localStorage.removeItem(STORAGE_KEYS.BASE_CONFIG);
+      localStorage.removeItem(STORAGE_KEYS.LAST_INPUTS);
+
+      configInputs.peso.value = FACTORY_DEFAULTS.peso;
+      configInputs.envioKg.value = FACTORY_DEFAULTS.envioKg;
+      configInputs.reempaque.value = FACTORY_DEFAULTS.reempaque;
+      configInputs.tc.value = FACTORY_DEFAULTS.tc;
+      configInputs.extras.value = FACTORY_DEFAULTS.extras;
+
+      inputs.peso.value = FACTORY_DEFAULTS.peso;
+      inputs.envioKg.value = FACTORY_DEFAULTS.envioKg;
+      inputs.reempaque.value = FACTORY_DEFAULTS.reempaque;
+      inputs.tc.value = FACTORY_DEFAULTS.tc;
+      inputs.extras.value = FACTORY_DEFAULTS.extras;
+
+      ejecutarCalculo();
+      showToast('Configuración de fábrica DUNES restaurada', 'info');
+    }
+  }
+
+  /**
+   * Escapar HTML para seguridad
    */
   function escapeHTML(str) {
     if (!str) return '';
@@ -494,9 +766,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   /**
-   * Eventos de Escucha
+   * ========================================================================
+   * ASIGNACIÓN DE EVENTOS
+   * ========================================================================
    */
-  // Cálculo automático en vivo mientras se escribe
+
+  // Cálculo y sincronización en tiempo real
   Object.values(inputs).forEach((input) => {
     if (input) {
       input.addEventListener('input', ejecutarCalculo);
@@ -504,7 +779,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Botones principales
+  // Botones del formulario
   btnCalcular.addEventListener('click', () => {
     ejecutarCalculo();
     showToast('Cálculo actualizado', 'info');
@@ -515,7 +790,12 @@ document.addEventListener('DOMContentLoaded', () => {
   btnLimpiar.addEventListener('click', limpiarDatos);
   btnBorrarHistorial.addEventListener('click', borrarTodoHistorial);
 
-  // Eventos de Modal
+  // Sección Configuración
+  btnToggleConfig.addEventListener('click', toggleConfiguracion);
+  btnGuardarConfig.addEventListener('click', guardarConfiguracionBase);
+  btnRestaurarFabrica.addEventListener('click', restaurarValoresFabrica);
+
+  // Modal
   btnCerrarModal.addEventListener('click', cerrarModal);
   btnCerrarModalBottom.addEventListener('click', cerrarModal);
   btnCargarModal.addEventListener('click', cargarItemEnFormulario);
@@ -523,14 +803,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.target === modalDetalle) cerrarModal();
   });
 
-  // Cerrar modal con tecla Escape
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && modalDetalle.classList.contains('is-active')) {
       cerrarModal();
     }
   });
 
-  // Detección de conectividad (Online/Offline)
+  // Estado Online / Offline
   function actualizarEstadoConexion() {
     if (!pwaStatus) return;
     const isOnline = navigator.onLine;
@@ -567,8 +846,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Inicialización
+  // ========================================================================
+  // ARRANQUE DE LA APLICACIÓN
+  // ========================================================================
+  cargarValoresIniciales();
   ejecutarCalculo();
   renderizarHistorial();
-  console.log('[DUNES PARFUMS] Inicializado correctamente.');
+  console.log('[DUNES PARFUMS] Inicializado con memoria inteligente y configuración activa.');
 });

@@ -101,4 +101,34 @@ console.log('--- Iniciando Tests Matemáticos de DUNES PARFUMS ---');
   console.log('✔ Caso 3 (Múltiples y Venta 0) superado con éxito.');
 }
 
+// Caso 4: Caso de prueba del nuevo flujo de pruebas sin navegador
+{
+  const inputPromptNuevo = {
+    producto: 'Dior Sauvage EDT 100ml',
+    cantidad: 1,
+    precioUSA: 19.95,
+    peso: 0.6,
+    envioKg: 9.50,
+    reempaque: 1.00,
+    tc: 3.40,
+    extras: 15.00,
+    venta: 139.00
+  };
+
+  const res = calculateDunesQuotation(inputPromptNuevo);
+
+  console.log('Caso 4 (Validación Directa Solicitada):', res);
+
+  assert.strictEqual(res.totalUSA, 19.95, 'Total USA debe ser 19.95 USD');
+  assert.strictEqual(res.flete, 5.70, 'Flete debe ser 0.6 * 9.50 = 5.70 USD');
+  assert.strictEqual(res.totalEnvio, 6.70, 'Total envío debe ser 5.70 + 1 = 6.70 USD');
+  assert.strictEqual(res.precioTotalUSD, 26.65, 'Total USD debe ser 19.95 + 6.70 = 26.65 USD');
+  assert.strictEqual(res.precioTotalSoles, 90.61, 'Costo Perú debe ser 26.65 * 3.40 = 90.61 S/');
+  assert.strictEqual(res.costoUnidad, 90.61, 'Costo unidad debe ser 90.61 S/');
+  assert.strictEqual(res.gananciaUnidad, 33.39, 'Ganancia unidad debe ser 139 - 90.61 - 15 = 33.39 S/');
+  assert.strictEqual(res.gananciaTotal, 33.39, 'Ganancia total debe ser 33.39 S/');
+  console.log('✔ Caso 4 (Validación Directa Solicitada) superado con éxito.');
+}
+
 console.log('--- TODOS LOS TESTS MATEMÁTICOS PASARON SATISFACTORIAMENTE ---');
+
