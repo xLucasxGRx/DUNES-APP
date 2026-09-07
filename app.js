@@ -141,6 +141,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentModalItem = null;
   let catalogoProductos = [];
   let catalogoCargando = false;
+  let catalogoImageObserver = null;
   let vistaActiva = 'cotizador';
 
   // Formateadores
@@ -893,6 +894,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (nombreTab === 'catalogo') {
       if (catalogoProductos.length === 0) {
         cargarCatalogo(false);
+      } else {
+        // Reactivar lazy loading de tarjetas visibles al regresar a la pestaña
+        iniciarLazyLoadingCatalogo();
       }
       if (catalogoElements.busqueda) {
         setTimeout(() => catalogoElements.busqueda.focus(), 150);
@@ -1224,8 +1228,13 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="card-top-section">
           <div class="card-title-group">
             ${tieneImagen ? `
-              <img src="${escapeHTML(item.imagen)}" alt="${escapeHTML(item.producto)}" class="card-mini-thumb" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='inline-flex';" loading="lazy">
-              <span class="card-perfume-icon" style="display:none;">🧴</span>
+              <div class="card-thumb-wrapper">
+                <div class="card-thumb-placeholder">
+                  <span class="card-thumb-shimmer"></span>
+                  <span class="card-thumb-fallback-icon">🧴</span>
+                </div>
+                <img data-src="${escapeHTML(item.imagen)}" alt="${escapeHTML(item.producto)}" class="card-mini-thumb" onerror="this.style.display='none'; if(this.previousElementSibling) this.previousElementSibling.classList.add('is-failed');">
+              </div>
             ` : `
               <span class="card-perfume-icon">🧴</span>
             `}
@@ -1261,6 +1270,74 @@ document.addEventListener('DOMContentLoaded', () => {
 
       catalogoElements.lista.appendChild(card);
     });
+
+    // Activar carga progresiva (Lazy Loading) de las imágenes visibles en pantalla
+    iniciarLazyLoadingCatalogo();
+  }
+
+  /**
+   * Carga progresiva (Lazy Loading) de imágenes del catálogo con IntersectionObserver.
+   * Carga únicamente las imágenes que entran en la pantalla visible del usuario.
+   */
+  function iniciarLazyLoadingCatalogo() {
+    if (catalogoImageObserver) {
+      catalogoImageObserver.disconnect();
+      catalogoImageObserver = null;
+    }
+
+    if (!catalogoElements.lista) return;
+
+    const lazyImages = catalogoElements.lista.querySelectorAll('img.card-mini-thumb[data-src]');
+    if (!lazyImages || lazyImages.length === 0) return;
+
+    if ('IntersectionObserver' in window) {
+      catalogoImageObserver = new IntersectionObserver((entries, observer) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const img = entry.target;
+            cargarImagenLazy(img);
+            observer.unobserve(img);
+          }
+        });
+      }, {
+        root: null,
+        rootMargin: '100px 0px 100px 0px', // Anticipa la carga 100px antes de entrar a la pantalla
+        threshold: 0.01
+      });
+
+      lazyImages.forEach((img) => catalogoImageObserver.observe(img));
+    } else {
+      // Fallback para navegadores antiguos sin IntersectionObserver
+      lazyImages.forEach((img) => cargarImagenLazy(img));
+    }
+  }
+
+  /**
+   * Carga asíncrona de una imagen con transición suave entre el placeholder y la imagen real.
+   */
+  function cargarImagenLazy(img) {
+    const src = img.getAttribute('data-src');
+    if (!src) return;
+    img.removeAttribute('data-src');
+
+    const wrapper = img.closest('.card-thumb-wrapper');
+    const placeholder = wrapper ? wrapper.querySelector('.card-thumb-placeholder') : null;
+
+    const preloader = new Image();
+    preloader.onload = () => {
+      img.src = src;
+      img.classList.add('is-loaded');
+      if (placeholder) {
+        placeholder.classList.add('is-hidden');
+      }
+    };
+    preloader.onerror = () => {
+      img.style.display = 'none';
+      if (placeholder) {
+        placeholder.classList.add('is-failed');
+      }
+    };
+    preloader.src = src;
   }
 
   /**
