@@ -89,10 +89,14 @@ DUNES-APP
 │── service-worker.js       # Caché offline compatible con GitHub Pages
 │── sw.js                   # Proxy de retrocompatibilidad para Service Worker
 │── manifest.json           # Manifiesto PWA para instalación móvil
-│── assets/                 # Iconos de alta resolución (192px, 512px, Apple)
-│   ├── icon-192.png
-│   ├── icon-512.png
-│   └── apple-touch-icon.png
+│── assets/                 # Identidad visual e iconos PWA oficiales
+│   ├── logocotizador.png   # Logo oficial DUNES PARFUMS (512x512)
+│   ├── favicon.ico         # Favicon multi-resolución para navegador
+│   ├── favicon-32x32.png   # Favicon estándar para pestañas
+│   ├── icon-192.png        # Icono PWA para móvil (192px)
+│   ├── icon-512.png        # Icono PWA para móvil (512px)
+│   ├── icon-maskable-512.png # Icono seguro para Android
+│   └── apple-touch-icon.png# Icono de pantalla de inicio para iOS
 │── tests/
 │   └── calculator.test.js  # Suite de pruebas unitarias automatizadas
 │── .gitignore              # Exclusión de archivos temporales
