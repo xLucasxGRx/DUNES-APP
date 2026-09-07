@@ -12,7 +12,12 @@
   <meta name="apple-mobile-web-app-title" content="DUNES PARFUMS">
   <link rel="apple-touch-icon" href="./assets/apple-touch-icon.png">
   <link rel="manifest" href="./manifest.json">
+  <link rel="shortcut icon" href="./favicon.ico">
+  <link rel="icon" type="image/x-icon" href="./assets/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="./assets/favicon-16x16.png">
   <link rel="icon" type="image/png" sizes="192x192" href="./assets/icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="./assets/icon-512.png">
 
   <title>DUNES PARFUMS — Cotizador Courier USA → Perú</title>
 
@@ -25,12 +30,31 @@
 </head>
 <body>
 
+  <!-- Pantalla de Carga de Bienvenida (Splash Screen de Lujo) -->
+  <div id="app-splash-screen" class="app-splash" aria-hidden="true">
+    <div class="splash-content">
+      <div class="splash-logo-wrapper">
+        <img src="./assets/logocotizador.png" alt="DUNES PARFUMS" class="splash-logo-img">
+      </div>
+      <span class="splash-brand-title">DUNES PARFUMS</span>
+      <span class="splash-brand-subtitle">COTIZADOR COURIER USA → PERÚ</span>
+      <div class="splash-loader-bar">
+        <div class="splash-loader-fill"></div>
+      </div>
+    </div>
+  </div>
+
   <div class="app-container">
     <!-- Header Principal Minimalista de Lujo -->
     <header class="app-header">
       <div class="header-brand-group">
-        <img src="./assets/logohorizontaldunesparfums.webp" alt="DUNES PARFUMS" class="brand-logo-img">
-        <p class="brand-tagline">Cotizador Courier USA 🇺🇸 → Perú 🇵🇪</p>
+        <div class="brand-logo-container">
+          <img src="./assets/logocotizador.png" alt="DUNES PARFUMS" class="brand-logo-img">
+        </div>
+        <div class="brand-text-container">
+          <h1 class="brand-title">DUNES PARFUMS</h1>
+          <p class="brand-tagline">Cotizador Courier USA 🇺🇸 → Perú 🇵🇪</p>
+        </div>
       </div>
 
       <div class="header-controls">
@@ -39,6 +63,9 @@
           <span class="status-text-mini">Online</span>
         </div>
 
+        <button id="btn-abrir-config" type="button" class="btn-config-icon" title="Configuración de Costos Base" aria-label="Configuración de Costos Base">
+          <span class="gear-icon">⚙️</span>
+        </button>
       </div>
     </header>
 

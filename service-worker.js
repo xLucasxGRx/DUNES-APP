@@ -4,7 +4,7 @@
  * ==========================================================================
  */
 
-const CACHE_NAME = 'dunes-parfums-v2.2';
+const CACHE_NAME = 'dunes-parfums-v2.3';
 
 // Lista de activos estáticos con rutas relativas compatibles con GitHub Pages
 const STATIC_ASSETS = [
@@ -14,10 +14,15 @@ const STATIC_ASSETS = [
   './app.js',
   './js/calculator.js',
   './manifest.json',
+  './favicon.ico',
+  './assets/favicon.ico',
+  './assets/favicon-32x32.png',
   './assets/icon-192.png',
   './assets/icon-512.png',
+  './assets/icon-maskable-192.png',
+  './assets/icon-maskable-512.png',
   './assets/apple-touch-icon.png',
-  './assets/logohorizontaldunesparfums.webp'
+  './assets/logocotizador.png'
 ];
 
 // Instalación: Precarga de recursos en la caché
