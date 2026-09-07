@@ -142,6 +142,8 @@ document.addEventListener('DOMContentLoaded', () => {
   let catalogoProductos = [];
   let catalogoCargando = false;
   let catalogoImageObserver = null;
+  let filtroCategoriaActivo = 'todos';
+  let filtroGeneroActivo = 'todos';
   let vistaActiva = 'cotizador';
 
   // Formateadores
@@ -923,6 +925,8 @@ document.addEventListener('DOMContentLoaded', () => {
       id: 'dp-live-1',
       producto: '9 Am Dive 3.4 Oz',
       precioUSA: 19.71,
+      categoria: 'Árabes',
+      genero: 'Unisex',
       cantidad: 1,
       pesoKg: 0.65,
       fleteKg: 9.50,
@@ -936,6 +940,8 @@ document.addEventListener('DOMContentLoaded', () => {
       id: 'dp-1',
       producto: 'Dior Sauvage EDT 100ml',
       precioUSA: 19.95,
+      categoria: 'Diseñador',
+      genero: 'Hombre',
       cantidad: 1,
       pesoKg: 0.60,
       fleteKg: 9.50,
@@ -949,6 +955,8 @@ document.addEventListener('DOMContentLoaded', () => {
       id: 'dp-2',
       producto: 'Club de Nuit Intense Man EDT 105ml',
       precioUSA: 28.00,
+      categoria: 'Árabes',
+      genero: 'Hombre',
       cantidad: 2,
       pesoKg: 0.70,
       fleteKg: 9.50,
@@ -962,6 +970,8 @@ document.addEventListener('DOMContentLoaded', () => {
       id: 'dp-3',
       producto: 'Khamrah Lattafa EDP 100ml',
       precioUSA: 25.00,
+      categoria: 'Árabes',
+      genero: 'Unisex',
       cantidad: 1,
       pesoKg: 0.60,
       fleteKg: 9.50,
@@ -975,6 +985,8 @@ document.addEventListener('DOMContentLoaded', () => {
       id: 'dp-4',
       producto: 'Bleu de Chanel EDP 100ml',
       precioUSA: 115.00,
+      categoria: 'Diseñador',
+      genero: 'Hombre',
       cantidad: 1,
       pesoKg: 0.60,
       fleteKg: 9.50,
@@ -988,6 +1000,8 @@ document.addEventListener('DOMContentLoaded', () => {
       id: 'dp-5',
       producto: 'Versace Eros Flame EDP 100ml',
       precioUSA: 58.00,
+      categoria: 'Diseñador',
+      genero: 'Hombre',
       cantidad: 1,
       pesoKg: 0.60,
       fleteKg: 9.50,
@@ -1001,6 +1015,8 @@ document.addEventListener('DOMContentLoaded', () => {
       id: 'dp-6',
       producto: 'Afnan 9PM EDP 100ml',
       precioUSA: 26.50,
+      categoria: 'Árabes',
+      genero: 'Hombre',
       cantidad: 1,
       pesoKg: 0.65,
       fleteKg: 9.50,
@@ -1009,6 +1025,36 @@ document.addEventListener('DOMContentLoaded', () => {
       costoPeru: 114.50,
       precioVenta: 175.00,
       ganancia: 60.50
+    },
+    {
+      id: 'dp-7',
+      producto: 'Yara Lattafa EDP 100ml',
+      precioUSA: 24.00,
+      categoria: 'Árabes',
+      genero: 'Mujer',
+      cantidad: 1,
+      pesoKg: 0.60,
+      fleteKg: 9.50,
+      reempaque: 1.00,
+      costosExtras: 15.00,
+      costoPeru: 108.50,
+      precioVenta: 165.00,
+      ganancia: 56.50
+    },
+    {
+      id: 'dp-8',
+      producto: 'Good Girl Carolina Herrera EDP 80ml',
+      precioUSA: 89.00,
+      categoria: 'Diseñador',
+      genero: 'Mujer',
+      cantidad: 1,
+      pesoKg: 0.60,
+      fleteKg: 9.50,
+      reempaque: 1.00,
+      costosExtras: 15.00,
+      costoPeru: 325.00,
+      precioVenta: 420.00,
+      ganancia: 95.00
     }
   ];
 
@@ -1090,6 +1136,23 @@ document.addEventListener('DOMContentLoaded', () => {
    * J: Costos extras
    * K: Ganancia (S/.)
    */
+  /**
+   * Convierte filas de Google Sheets en objetos normalizados según la estructura oficial:
+   * Columna A: Producto
+   * Columna B: Precio USA ($)
+   * Columna C: Cantidad
+   * Columna D: Categoría
+   * Columna E: Género
+   * Columna F: Peso KG
+   * Columna G: Flete x KG
+   * Columna H: Reempaque
+   * Columna I: Precio Dólar (T.C)
+   * Columna J: Costo Perú
+   * Columna K: Precio Venta (S/.)
+   * Columna L: Costos extras
+   * Columna M: Ganancia (S/.)
+   * Columna N: Imagen
+   */
   function convertirFilasACatalogo(rows) {
     if (!rows || rows.length < 2) return [];
 
@@ -1097,10 +1160,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const encontrarIndice = (posibles) => headers.findIndex(h => posibles.includes(h));
 
     const idxMap = {
-      // Mapeo exacto de los nombres actuales del Sheet (A-K) + columna opcional imagen:
+      // Mapeo exacto de los nombres de columnas oficiales (A-N):
       producto: encontrarIndice(['producto', 'perfume', 'nombre']),
       precioUSA: encontrarIndice(['preciousa', 'precio_usa', 'preciounitariousa']),
       cantidad: encontrarIndice(['cantidad', 'cant', 'unidades']),
+      categoria: encontrarIndice(['categoria', 'cat', 'category']),
+      genero: encontrarIndice(['genero', 'gender', 'sexo']),
       pesoKg: encontrarIndice(['pesokg', 'peso', 'peso_kg']),
       fleteKg: encontrarIndice(['fletexkg', 'fletekg', 'flete_x_kg']),
       reempaque: encontrarIndice(['reempaque']),
@@ -1112,18 +1177,41 @@ document.addEventListener('DOMContentLoaded', () => {
       imagen: encontrarIndice(['imagen', 'img', 'foto', 'image', 'urlimagen', 'imagenurl', 'fotourl'])
     };
 
-    // Respaldo estricto por posición de columnas A-K (0 a 10):
-    if (idxMap.producto === -1 && headers.length > 0) idxMap.producto = 0;
-    if (idxMap.precioUSA === -1 && headers.length > 1) idxMap.precioUSA = 1;
-    if (idxMap.cantidad === -1 && headers.length > 2) idxMap.cantidad = 2;
-    if (idxMap.pesoKg === -1 && headers.length > 3) idxMap.pesoKg = 3;
-    if (idxMap.fleteKg === -1 && headers.length > 4) idxMap.fleteKg = 4;
-    if (idxMap.reempaque === -1 && headers.length > 5) idxMap.reempaque = 5;
-    if (idxMap.precioDolarTC === -1 && headers.length > 6) idxMap.precioDolarTC = 6;
-    if (idxMap.costoPeru === -1 && headers.length > 7) idxMap.costoPeru = 7;
-    if (idxMap.precioVenta === -1 && headers.length > 8) idxMap.precioVenta = 8;
-    if (idxMap.costosExtras === -1 && headers.length > 9) idxMap.costosExtras = 9;
-    if (idxMap.ganancia === -1 && headers.length > 10) idxMap.ganancia = 10;
+    // Respaldo estricto por posición de columnas A-N (0 a 13):
+    // A: Producto (0), B: Precio USA ($) (1), C: Cantidad (2), D: Categoría (3), E: Género (4),
+    // F: Peso KG (5), G: Flete x KG (6), H: Reempaque (7), I: Precio Dólar (T.C) (8),
+    // J: Costo Perú (9), K: Precio Venta (S/.) (10), L: Costos extras (11), M: Ganancia (S/.) (12), N: Imagen (13)
+    const tieneEstructuraConCatGen = idxMap.categoria !== -1 || idxMap.genero !== -1 || headers.length >= 13;
+
+    if (tieneEstructuraConCatGen) {
+      if (idxMap.producto === -1 && headers.length > 0) idxMap.producto = 0;
+      if (idxMap.precioUSA === -1 && headers.length > 1) idxMap.precioUSA = 1;
+      if (idxMap.cantidad === -1 && headers.length > 2) idxMap.cantidad = 2;
+      if (idxMap.categoria === -1 && headers.length > 3) idxMap.categoria = 3;
+      if (idxMap.genero === -1 && headers.length > 4) idxMap.genero = 4;
+      if (idxMap.pesoKg === -1 && headers.length > 5) idxMap.pesoKg = 5;
+      if (idxMap.fleteKg === -1 && headers.length > 6) idxMap.fleteKg = 6;
+      if (idxMap.reempaque === -1 && headers.length > 7) idxMap.reempaque = 7;
+      if (idxMap.precioDolarTC === -1 && headers.length > 8) idxMap.precioDolarTC = 8;
+      if (idxMap.costoPeru === -1 && headers.length > 9) idxMap.costoPeru = 9;
+      if (idxMap.precioVenta === -1 && headers.length > 10) idxMap.precioVenta = 10;
+      if (idxMap.costosExtras === -1 && headers.length > 11) idxMap.costosExtras = 11;
+      if (idxMap.ganancia === -1 && headers.length > 12) idxMap.ganancia = 12;
+      if (idxMap.imagen === -1 && headers.length > 13) idxMap.imagen = 13;
+    } else {
+      // Respaldo retrocompatible para formatos anteriores A-K (0 a 10)
+      if (idxMap.producto === -1 && headers.length > 0) idxMap.producto = 0;
+      if (idxMap.precioUSA === -1 && headers.length > 1) idxMap.precioUSA = 1;
+      if (idxMap.cantidad === -1 && headers.length > 2) idxMap.cantidad = 2;
+      if (idxMap.pesoKg === -1 && headers.length > 3) idxMap.pesoKg = 3;
+      if (idxMap.fleteKg === -1 && headers.length > 4) idxMap.fleteKg = 4;
+      if (idxMap.reempaque === -1 && headers.length > 5) idxMap.reempaque = 5;
+      if (idxMap.precioDolarTC === -1 && headers.length > 6) idxMap.precioDolarTC = 6;
+      if (idxMap.costoPeru === -1 && headers.length > 7) idxMap.costoPeru = 7;
+      if (idxMap.precioVenta === -1 && headers.length > 8) idxMap.precioVenta = 8;
+      if (idxMap.costosExtras === -1 && headers.length > 9) idxMap.costosExtras = 9;
+      if (idxMap.ganancia === -1 && headers.length > 10) idxMap.ganancia = 10;
+    }
 
     const limpiarNumero = (val, valorDefault = 0) => {
       if (val === undefined || val === null || val === '') return valorDefault;
@@ -1148,6 +1236,10 @@ document.addEventListener('DOMContentLoaded', () => {
         precioVenta: idxMap.precioVenta !== -1 ? limpiarNumero(row[idxMap.precioVenta], 0) : 0,
         ganancia: idxMap.ganancia !== -1 ? limpiarNumero(row[idxMap.ganancia], 0) : 0,
 
+        // Campos de filtrado:
+        categoria: (idxMap.categoria !== -1 && row[idxMap.categoria]) ? (row[idxMap.categoria] || '').toString().trim() : '',
+        genero: (idxMap.genero !== -1 && row[idxMap.genero]) ? (row[idxMap.genero] || '').toString().trim() : '',
+
         // Datos internos mantenidos:
         cantidad: idxMap.cantidad !== -1 ? Math.max(1, parseInt(row[idxMap.cantidad], 10) || 1) : 1,
         pesoKg: idxMap.pesoKg !== -1 ? limpiarNumero(row[idxMap.pesoKg], 0.6) : 0.6,
@@ -1155,7 +1247,7 @@ document.addEventListener('DOMContentLoaded', () => {
         reempaque: idxMap.reempaque !== -1 ? limpiarNumero(row[idxMap.reempaque], 1.00) : 1.00,
         tc: idxMap.precioDolarTC !== -1 ? limpiarNumero(row[idxMap.precioDolarTC], 3.40) : 3.40,
         costosExtras: idxMap.costosExtras !== -1 ? limpiarNumero(row[idxMap.costosExtras], 10.00) : 10.00,
-        imagen: (idxMap.imagen !== -1 && row[idxMap.imagen]) ? (row[idxMap.imagen] || '').trim() : ''
+        imagen: (idxMap.imagen !== -1 && row[idxMap.imagen]) ? (row[idxMap.imagen] || '').toString().trim() : ''
       });
     }
 
@@ -1205,7 +1297,10 @@ document.addEventListener('DOMContentLoaded', () => {
       catalogoElements.empty.style.display = 'flex';
       if (terminoBusqueda) {
         catalogoElements.emptyTitle.textContent = `No se encontraron perfumes para "${terminoBusqueda}"`;
-        catalogoElements.emptyDesc.textContent = 'Intenta buscando por marca o nombre (ej: 9 Am, Dior, Club de Nuit).';
+        catalogoElements.emptyDesc.textContent = 'Intenta buscando por otra marca o nombre, o ajusta los filtros de categoría/género.';
+      } else if (filtroCategoriaActivo !== 'todos' || filtroGeneroActivo !== 'todos') {
+        catalogoElements.emptyTitle.textContent = 'No hay perfumes con los filtros seleccionados';
+        catalogoElements.emptyDesc.textContent = 'Prueba seleccionando "Todos" en categoría o género.';
       } else {
         catalogoElements.emptyTitle.textContent = 'Catálogo vacío';
         catalogoElements.emptyDesc.textContent = 'No hay filas en la hoja de Google Sheets.';
@@ -1343,24 +1438,65 @@ document.addEventListener('DOMContentLoaded', () => {
   /**
    * Filtrado en tiempo real con el Buscador
    */
+  /**
+   * Filtrado en tiempo real con el Buscador y los Filtros de Categoría y Género
+   */
   function filtrarCatalogo() {
-    if (!catalogoElements.busqueda) return;
-    const termino = catalogoElements.busqueda.value.trim();
+    const termino = catalogoElements.busqueda ? catalogoElements.busqueda.value.trim() : '';
 
-    if (!termino) {
-      if (catalogoElements.btnLimpiar) catalogoElements.btnLimpiar.style.display = 'none';
-      renderizarCatalogo(catalogoProductos, '');
-      return;
+    if (catalogoElements.btnLimpiar) {
+      catalogoElements.btnLimpiar.style.display = termino ? 'flex' : 'none';
     }
 
-    if (catalogoElements.btnLimpiar) catalogoElements.btnLimpiar.style.display = 'flex';
+    const normalizar = (s) => (s || '')
+      .toString()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim();
 
-    const normalizar = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     const terminoNorm = normalizar(termino);
+    const catFiltroNorm = normalizar(filtroCategoriaActivo);
+    const genFiltroNorm = normalizar(filtroGeneroActivo);
 
     const filtrados = catalogoProductos.filter((item) => {
-      const nombreNorm = normalizar(item.producto);
-      return nombreNorm.includes(terminoNorm);
+      // 1. Filtro por término de búsqueda en el nombre del producto
+      if (terminoNorm) {
+        const nombreNorm = normalizar(item.producto);
+        if (!nombreNorm.includes(terminoNorm)) return false;
+      }
+
+      // 2. Filtro de Categoría (Opciones: Todos | Diseñador | Árabes)
+      if (catFiltroNorm && catFiltroNorm !== 'todos') {
+        const itemCatNorm = normalizar(item.categoria);
+        if (catFiltroNorm === 'disenador') {
+          if (!itemCatNorm.includes('disenad')) return false;
+        } else if (catFiltroNorm === 'arabes') {
+          if (!itemCatNorm.includes('arab')) return false;
+        } else {
+          if (itemCatNorm !== catFiltroNorm) return false;
+        }
+      }
+
+      // 3. Filtro de Género (Opciones: Todos | Hombre | Mujer)
+      // Regla de Negocio solicitada:
+      // - Todos: Muestra Hombre, Mujer y Unisex (todo)
+      // - Hombre: Muestra Género = Hombre O Género = Unisex
+      // - Mujer: Muestra Género = Mujer O Género = Unisex
+      if (genFiltroNorm && genFiltroNorm !== 'todos') {
+        const itemGenNorm = normalizar(item.genero);
+        const esUnisex = itemGenNorm.includes('unisex');
+
+        if (genFiltroNorm === 'hombre') {
+          const esHombre = itemGenNorm.includes('hombre') || itemGenNorm.includes('men') || itemGenNorm.includes('man') || itemGenNorm.includes('masculin');
+          if (!esHombre && !esUnisex) return false;
+        } else if (genFiltroNorm === 'mujer') {
+          const esMujer = itemGenNorm.includes('mujer') || itemGenNorm.includes('wom') || itemGenNorm.includes('femenin');
+          if (!esMujer && !esUnisex) return false;
+        }
+      }
+
+      return true;
     });
 
     renderizarCatalogo(filtrados, termino);
@@ -1493,6 +1629,29 @@ document.addEventListener('DOMContentLoaded', () => {
       cargarCatalogo(true);
     });
   }
+
+  // Filtros de Categoría y Género del Catálogo
+  const filterBtns = document.querySelectorAll('.catalog-filter-btn');
+  filterBtns.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const tipo = btn.getAttribute('data-filter'); // 'categoria' | 'genero'
+      const valor = btn.getAttribute('data-value'); // 'todos' | 'diseñador' | 'árabes' | 'hombre' | 'mujer'
+
+      if (tipo === 'categoria') {
+        filtroCategoriaActivo = valor;
+        document.querySelectorAll('.catalog-filter-btn[data-filter="categoria"]').forEach((b) => {
+          b.classList.toggle('is-active', b === btn);
+        });
+      } else if (tipo === 'genero') {
+        filtroGeneroActivo = valor;
+        document.querySelectorAll('.catalog-filter-btn[data-filter="genero"]').forEach((b) => {
+          b.classList.toggle('is-active', b === btn);
+        });
+      }
+
+      filtrarCatalogo();
+    });
+  });
 
   // Cálculo y sincronización en tiempo real
   Object.entries(inputs).forEach(([key, input]) => {

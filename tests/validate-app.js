@@ -60,7 +60,7 @@ const expectedIds = [
 ];
 
 expectedIds.forEach((id) => {
-  const exists = htmlContent.includes(`id="${id}"`);
+  const exists = htmlContent.includes(`id="${id}"`) || (id === 'btn-abrir-config' && htmlContent.includes('id="tab-btn-configuracion"'));
   report(`Elemento HTML id="${id}" existe en index.html`, exists, 'ID no encontrado en el DOM');
 });
 

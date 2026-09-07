@@ -26,7 +26,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="./style.css">
+  <link rel="stylesheet" href="./style.css?v=2.4">
 </head>
 <body>
 
@@ -359,6 +359,29 @@
             </div>
           </div>
 
+          <!-- Filtros de Categoría y Género -->
+          <div class="catalog-filters-container">
+            <!-- Filtro de Categoría -->
+            <div class="filter-row">
+              <span class="filter-row-label">Categoría</span>
+              <div class="filter-pills-group" id="filter-group-categoria" role="group" aria-label="Filtro de categoría">
+                <button type="button" class="catalog-filter-btn is-active" data-filter="categoria" data-value="todos">Todos</button>
+                <button type="button" class="catalog-filter-btn" data-filter="categoria" data-value="diseñador">Diseñador</button>
+                <button type="button" class="catalog-filter-btn" data-filter="categoria" data-value="árabes">Árabes</button>
+              </div>
+            </div>
+
+            <!-- Filtro de Género -->
+            <div class="filter-row">
+              <span class="filter-row-label">Género</span>
+              <div class="filter-pills-group" id="filter-group-genero" role="group" aria-label="Filtro de género">
+                <button type="button" class="catalog-filter-btn is-active" data-filter="genero" data-value="todos">Todos</button>
+                <button type="button" class="catalog-filter-btn" data-filter="genero" data-value="hombre">Hombre</button>
+                <button type="button" class="catalog-filter-btn" data-filter="genero" data-value="mujer">Mujer</button>
+              </div>
+            </div>
+          </div>
+
           <!-- Contenedor Dinámico de Tarjetas de Perfumes (Solo Lectura) -->
           <div id="catalogo-lista" class="catalogo-cards-grid">
             <!-- Inyectado por app.js -->
@@ -518,6 +541,6 @@
 
   <!-- Scripts -->
   <script src="./js/calculator.js"></script>
-  <script src="./app.js"></script>
+  <script src="./app.js?v=2.4"></script>
 </body>
 </html>
