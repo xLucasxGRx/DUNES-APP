@@ -136,13 +136,6 @@ document.addEventListener('DOMContentLoaded', () => {
     syncText: document.getElementById('catalogo-sync-text')
   };
 
-  // Referencias de Configuración de Google Sheets
-  const sheetsConfigElements = {
-    urlInput: document.getElementById('cfg-sheets-url'),
-    btnProbar: document.getElementById('btn-probar-sheets'),
-    status: document.getElementById('cfg-sheets-status')
-  };
-
   // Estado en memoria
   let currentCalculations = null;
   let currentModalItem = null;
@@ -770,14 +763,6 @@ document.addEventListener('DOMContentLoaded', () => {
     configInputs.tc.value = configBase.tc;
     configInputs.extras.value = configBase.extras;
 
-    // Cargar URL guardada de Google Sheets
-    if (sheetsConfigElements.urlInput) {
-      sheetsConfigElements.urlInput.value = localStorage.getItem(STORAGE_KEYS.SHEETS_URL) || DEFAULT_SHEETS_CSV_URL;
-    }
-    if (sheetsConfigElements.status) {
-      sheetsConfigElements.status.textContent = '';
-    }
-
     modalConfig.classList.add('is-active');
     modalConfig.setAttribute('aria-hidden', 'false');
   }
@@ -811,15 +796,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     localStorage.setItem(STORAGE_KEYS.BASE_CONFIG, JSON.stringify(nuevaConfig));
-
-    // Guardar URL de Google Sheets si se especificó
-    if (sheetsConfigElements.urlInput) {
-      const sheetsUrl = sheetsConfigElements.urlInput.value.trim();
-      localStorage.setItem(STORAGE_KEYS.SHEETS_URL, sheetsUrl);
-      if (sheetsUrl) {
-        cargarCatalogo(true);
-      }
-    }
 
     // Aplicar de inmediato al cotizador:
     // Reempaque total = Cantidad de perfumes × costo reempaque por perfume
@@ -1409,64 +1385,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   /**
-   * Probar conexión con Google Sheets desde el Modal de Configuración
-   */
-  async function probarConexionSheets() {
-    const url = sheetsConfigElements.urlInput ? sheetsConfigElements.urlInput.value.trim() : '';
-    if (!url) {
-      if (sheetsConfigElements.status) {
-        sheetsConfigElements.status.textContent = '⚠️ Ingresa el enlace o ID de tu Google Sheet';
-        sheetsConfigElements.status.style.color = 'var(--crimson-loss)';
-      }
-      return;
-    }
-
-    if (sheetsConfigElements.status) {
-      sheetsConfigElements.status.textContent = '⏳ Probando conexión con Google Sheets...';
-      sheetsConfigElements.status.style.color = 'var(--gold-light)';
-    }
-
-    const urlCSV = construirURLGoogleSheetCSV(url);
-    if (!urlCSV) {
-      if (sheetsConfigElements.status) {
-        sheetsConfigElements.status.textContent = '⚠️ Enlace no reconocido. Pega el enlace de Google Sheets.';
-        sheetsConfigElements.status.style.color = 'var(--crimson-loss)';
-      }
-      return;
-    }
-
-    try {
-      const res = await fetch(urlCSV, { method: 'GET', cache: 'no-cache' });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const text = await res.text();
-      const rows = parsearCSV(text);
-      const items = convertirFilasACatalogo(rows);
-
-      if (items.length > 0) {
-        localStorage.setItem(STORAGE_KEYS.SHEETS_URL, url);
-        catalogoProductos = items;
-        localStorage.setItem(STORAGE_KEYS.CATALOGO_CACHE, JSON.stringify(items));
-        const hora = new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
-        localStorage.setItem(STORAGE_KEYS.CATALOGO_LAST_SYNC, hora);
-
-        if (sheetsConfigElements.status) {
-          sheetsConfigElements.status.textContent = `✔ Conectado exitosamente (${items.length} perfumes leídos)`;
-          sheetsConfigElements.status.style.color = 'var(--emerald-profit)';
-        }
-        renderizarCatalogo(catalogoProductos);
-        showToast(`Google Sheets sincronizado: ${items.length} perfumes`);
-      } else {
-        throw new Error('No se detectaron columnas con la estructura esperada');
-      }
-    } catch (err) {
-      if (sheetsConfigElements.status) {
-        sheetsConfigElements.status.textContent = '⚠️ No se pudo leer la hoja. Asegúrate de compartirla como "Cualquier persona con el enlace puede ver".';
-        sheetsConfigElements.status.style.color = 'var(--crimson-loss)';
-      }
-    }
-  }
-
-  /**
    * ========================================================================
    * ASIGNACIÓN DE EVENTOS
    * ========================================================================
@@ -1497,10 +1415,6 @@ document.addEventListener('DOMContentLoaded', () => {
     catalogoElements.btnSync.addEventListener('click', () => {
       cargarCatalogo(true);
     });
-  }
-
-  if (sheetsConfigElements.btnProbar) {
-    sheetsConfigElements.btnProbar.addEventListener('click', probarConexionSheets);
   }
 
   // Cálculo y sincronización en tiempo real

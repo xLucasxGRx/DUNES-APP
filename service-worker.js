@@ -4,7 +4,7 @@
  * ==========================================================================
  */
 
-const CACHE_NAME = 'dunes-parfums-v1.8';
+const CACHE_NAME = 'dunes-parfums-v2.2';
 
 // Lista de activos estáticos con rutas relativas compatibles con GitHub Pages
 const STATIC_ASSETS = [

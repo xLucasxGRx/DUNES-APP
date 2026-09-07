@@ -39,9 +39,6 @@
           <span class="status-text-mini">Online</span>
         </div>
 
-        <button id="btn-abrir-config" type="button" class="btn-config-icon" title="Configuración de Costos Base" aria-label="Configuración de Costos Base">
-          <span class="gear-icon">⚙️</span>
-        </button>
       </div>
     </header>
 
@@ -310,7 +307,7 @@
                 <span>Solo Consulta</span>
               </div>
               <h2 class="catalog-main-title">CATÁLOGO DE PERFUMES</h2>
-              <p class="catalog-subtitle">Conexión directa con Google Sheets &bull; Información en tiempo real</p>
+              <p class="catalog-subtitle">Conectado con Google Sheets &bull; Información en tiempo real</p>
             </div>
 
             <!-- Sincronización y Estado Google Sheets -->
@@ -478,33 +475,6 @@
               <input id="cfg-extras" type="number" min="0" step="0.01" value="15.00">
             </div>
             <span class="input-hint">Delivery, caja o bolsa</span>
-          </div>
-        </div>
-
-        <!-- Bloque Configuración: Conexión Google Sheets para Catálogo -->
-        <div class="config-sheets-box">
-          <div class="config-sheets-header">
-            <span class="config-sheets-icon">📊</span>
-            <div>
-              <h4 class="config-sheets-title">CONEXIÓN GOOGLE SHEETS (CATÁLOGO)</h4>
-              <p class="config-sheets-desc">Google Sheets es la única fuente de edición del catálogo. Asegúrate de que la hoja tenga permiso: <strong>"Cualquier persona con el enlace puede ver"</strong>.</p>
-            </div>
-          </div>
-
-          <div class="input-field input-field-full">
-            <label for="cfg-sheets-url">Enlace o ID de Google Sheets</label>
-            <div class="input-wrapper">
-              <span class="input-prefix">🔗</span>
-              <input id="cfg-sheets-url" type="text" placeholder="https://docs.google.com/spreadsheets/d/.../edit?usp=sharing" autocomplete="off">
-            </div>
-            <span class="input-hint">Columnas actuales: Producto, Precio USA ($), Cantidad, Peso KG, Flete x KG, Reempaque, Precio Dólar (T.C), Costo Perú, Precio Venta (S/.), Costos extras, Ganancia (S/.)</span>
-          </div>
-
-          <div class="config-sheets-actions">
-            <button type="button" id="btn-probar-sheets" class="btn btn-secondary btn-sm">
-              <span>⚡ Probar y Sincronizar Ahora</span>
-            </button>
-            <span id="cfg-sheets-status" class="config-sheets-status-label"></span>
           </div>
         </div>
       </div>
