@@ -11,8 +11,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const STORAGE_KEYS = {
     HISTORY: 'dunes_cotizaciones_v1',
     BASE_CONFIG: 'dunes_config_base_v1',
-    LAST_INPUTS: 'dunes_last_inputs_v1'
+    LAST_INPUTS: 'dunes_last_inputs_v1',
+    SHEETS_URL: 'dunes_google_sheets_url_v1',
+    CATALOGO_CACHE: 'dunes_catalogo_cache_v2',
+    CATALOGO_LAST_SYNC: 'dunes_catalogo_last_sync_v1'
   };
+
+  // URL del Google Sheets público oficial maestro de DUNES PARFUMS
+  const DEFAULT_SHEETS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSMxWTEsUiAmYSnu8ra29ku79UTtObn2EnphEEabBODeDZDdXUVcHqI85RnXSvSHBuRthVUlbsWnCy_/pub?output=csv';
 
   // Valores de Fábrica Iniciales (DUNES PARFUMS)
   // La capacidad de la caja es fija por negocio: siempre 4 perfumes
@@ -108,9 +114,41 @@ document.addEventListener('DOMContentLoaded', () => {
   const toastContainer = document.getElementById('toast-container');
   const pwaStatus = document.getElementById('pwa-status');
 
+  // Referencias de Navegación y Vistas
+  const navTabs = document.querySelectorAll('.app-nav-tabs .nav-tab');
+  const views = {
+    cotizador: document.getElementById('vista-cotizador'),
+    catalogo: document.getElementById('vista-catalogo'),
+    cotizaciones: document.getElementById('vista-cotizaciones')
+  };
+
+  // Referencias del Módulo Catálogo
+  const catalogoElements = {
+    busqueda: document.getElementById('catalogo-busqueda'),
+    btnLimpiar: document.getElementById('catalogo-btn-limpiar-busqueda'),
+    contador: document.getElementById('catalogo-contador'),
+    lista: document.getElementById('catalogo-lista'),
+    empty: document.getElementById('catalogo-empty'),
+    emptyTitle: document.getElementById('catalogo-empty-title'),
+    emptyDesc: document.getElementById('catalogo-empty-desc'),
+    btnSync: document.getElementById('btn-sincronizar-catalogo'),
+    syncDot: document.getElementById('catalogo-sync-dot'),
+    syncText: document.getElementById('catalogo-sync-text')
+  };
+
+  // Referencias de Configuración de Google Sheets
+  const sheetsConfigElements = {
+    urlInput: document.getElementById('cfg-sheets-url'),
+    btnProbar: document.getElementById('btn-probar-sheets'),
+    status: document.getElementById('cfg-sheets-status')
+  };
+
   // Estado en memoria
   let currentCalculations = null;
   let currentModalItem = null;
+  let catalogoProductos = [];
+  let catalogoCargando = false;
+  let vistaActiva = 'cotizador';
 
   // Formateadores
   const formatUSD = (num) => `$ ${Number(num || 0).toFixed(2)}`;
@@ -732,6 +770,14 @@ document.addEventListener('DOMContentLoaded', () => {
     configInputs.tc.value = configBase.tc;
     configInputs.extras.value = configBase.extras;
 
+    // Cargar URL guardada de Google Sheets
+    if (sheetsConfigElements.urlInput) {
+      sheetsConfigElements.urlInput.value = localStorage.getItem(STORAGE_KEYS.SHEETS_URL) || DEFAULT_SHEETS_CSV_URL;
+    }
+    if (sheetsConfigElements.status) {
+      sheetsConfigElements.status.textContent = '';
+    }
+
     modalConfig.classList.add('is-active');
     modalConfig.setAttribute('aria-hidden', 'false');
   }
@@ -766,6 +812,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     localStorage.setItem(STORAGE_KEYS.BASE_CONFIG, JSON.stringify(nuevaConfig));
 
+    // Guardar URL de Google Sheets si se especificó
+    if (sheetsConfigElements.urlInput) {
+      const sheetsUrl = sheetsConfigElements.urlInput.value.trim();
+      localStorage.setItem(STORAGE_KEYS.SHEETS_URL, sheetsUrl);
+      if (sheetsUrl) {
+        cargarCatalogo(true);
+      }
+    }
+
     // Aplicar de inmediato al cotizador:
     // Reempaque total = Cantidad de perfumes × costo reempaque por perfume
     const cantActual = Math.max(1, parseInt(inputs.cantidad.value, 10) || 1);
@@ -777,7 +832,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     autoGuardarValoresUsuario();
     ejecutarCalculo();
-    showToast('Configuración de reempaque y costos guardada exitosamente');
+    showToast('Configuración y enlace de Google Sheets guardados exitosamente');
     setTimeout(cerrarModalConfiguracion, 350);
   }
 
@@ -822,16 +877,636 @@ document.addEventListener('DOMContentLoaded', () => {
 
   /**
    * ========================================================================
+   * GESTIÓN DE NAVEGACIÓN ENTRE MÓDULOS (COTIZADOR / CATÁLOGO / COTIZACIONES)
+   * Regla de Negocio: El Cotizador siempre es el módulo principal y la pantalla inicial.
+   * ========================================================================
+   */
+  function cambiarPestana(nombreTab) {
+    if (nombreTab === 'configuracion') {
+      abrirModalConfiguracion();
+      return;
+    }
+
+    vistaActiva = nombreTab;
+
+    // Actualizar botones de navegación
+    navTabs.forEach((tab) => {
+      const tabName = tab.getAttribute('data-tab');
+      if (tabName === nombreTab) {
+        tab.classList.add('is-active');
+        tab.setAttribute('aria-selected', 'true');
+      } else if (tabName !== 'configuracion') {
+        tab.classList.remove('is-active');
+        tab.setAttribute('aria-selected', 'false');
+      }
+    });
+
+    // Cambiar visibilidad de las vistas
+    Object.entries(views).forEach(([key, viewEl]) => {
+      if (!viewEl) return;
+      if (key === nombreTab) {
+        viewEl.classList.remove('is-hidden');
+        viewEl.classList.add('is-active');
+      } else {
+        viewEl.classList.add('is-hidden');
+        viewEl.classList.remove('is-active');
+      }
+    });
+
+    // Acciones al cambiar a cada módulo
+    if (nombreTab === 'catalogo') {
+      if (catalogoProductos.length === 0) {
+        cargarCatalogo(false);
+      }
+      if (catalogoElements.busqueda) {
+        setTimeout(() => catalogoElements.busqueda.focus(), 150);
+      }
+    } else if (nombreTab === 'cotizaciones') {
+      renderizarHistorial();
+    }
+  }
+
+  /**
+   * ========================================================================
+   * MÓDULO CATÁLOGO (SOLO CONSULTA CONECTADO A GOOGLE SHEETS)
+   * Reglas de Negocio:
+   * - Google Sheets es la ÚNICA fuente de edición.
+   * - La app SOLO visualiza información.
+   * - NO permitir edición, NO inputs modificables, NO botones de guardar.
+   * - NO inventario, NO stock, NO clientes, NO cálculos dentro del catálogo.
+   * ========================================================================
+   */
+
+  // Catálogo base de perfumes de lujo (con datos de respaldo offline)
+  const CATALOGO_DEFAULT = [
+    {
+      id: 'dp-live-1',
+      producto: '9 Am Dive 3.4 Oz',
+      precioUSA: 19.71,
+      cantidad: 1,
+      pesoKg: 0.65,
+      fleteKg: 9.50,
+      reempaque: 1.00,
+      costosExtras: 10.00,
+      costoPeru: 91.41,
+      precioVenta: 139.00,
+      ganancia: 37.59
+    },
+    {
+      id: 'dp-1',
+      producto: 'Dior Sauvage EDT 100ml',
+      precioUSA: 19.95,
+      cantidad: 1,
+      pesoKg: 0.60,
+      fleteKg: 9.50,
+      reempaque: 1.00,
+      costosExtras: 15.00,
+      costoPeru: 86.53,
+      precioVenta: 139.00,
+      ganancia: 37.47
+    },
+    {
+      id: 'dp-2',
+      producto: 'Club de Nuit Intense Man EDT 105ml',
+      precioUSA: 28.00,
+      cantidad: 2,
+      pesoKg: 0.70,
+      fleteKg: 9.50,
+      reempaque: 1.00,
+      costosExtras: 15.00,
+      costoPeru: 115.20,
+      precioVenta: 185.00,
+      ganancia: 69.80
+    },
+    {
+      id: 'dp-3',
+      producto: 'Khamrah Lattafa EDP 100ml',
+      precioUSA: 25.00,
+      cantidad: 1,
+      pesoKg: 0.60,
+      fleteKg: 9.50,
+      reempaque: 1.00,
+      costosExtras: 15.00,
+      costoPeru: 112.50,
+      precioVenta: 175.00,
+      ganancia: 62.50
+    },
+    {
+      id: 'dp-4',
+      producto: 'Bleu de Chanel EDP 100ml',
+      precioUSA: 115.00,
+      cantidad: 1,
+      pesoKg: 0.60,
+      fleteKg: 9.50,
+      reempaque: 1.00,
+      costosExtras: 15.00,
+      costoPeru: 415.50,
+      precioVenta: 540.00,
+      ganancia: 124.50
+    },
+    {
+      id: 'dp-5',
+      producto: 'Versace Eros Flame EDP 100ml',
+      precioUSA: 58.00,
+      cantidad: 1,
+      pesoKg: 0.60,
+      fleteKg: 9.50,
+      reempaque: 1.00,
+      costosExtras: 15.00,
+      costoPeru: 220.00,
+      precioVenta: 310.00,
+      ganancia: 90.00
+    },
+    {
+      id: 'dp-6',
+      producto: 'Afnan 9PM EDP 100ml',
+      precioUSA: 26.50,
+      cantidad: 1,
+      pesoKg: 0.65,
+      fleteKg: 9.50,
+      reempaque: 1.00,
+      costosExtras: 15.00,
+      costoPeru: 114.50,
+      precioVenta: 175.00,
+      ganancia: 60.50
+    }
+  ];
+
+  /**
+   * Parser CSV compatible con RFC 4180 (soporta comillas, comas y saltos)
+   */
+  function parsearCSV(csvText) {
+    const rows = [];
+    let currentRow = [];
+    let currentField = '';
+    let inQuotes = false;
+
+    for (let i = 0; i < csvText.length; i++) {
+      const char = csvText[i];
+      const nextChar = csvText[i + 1];
+
+      if (inQuotes) {
+        if (char === '"') {
+          if (nextChar === '"') {
+            currentField += '"';
+            i++;
+          } else {
+            inQuotes = false;
+          }
+        } else {
+          currentField += char;
+        }
+      } else {
+        if (char === '"') {
+          inQuotes = true;
+        } else if (char === ',') {
+          currentRow.push(currentField.trim());
+          currentField = '';
+        } else if (char === '\r') {
+          if (nextChar === '\n') i++;
+          currentRow.push(currentField.trim());
+          if (currentRow.some(cell => cell.length > 0)) rows.push(currentRow);
+          currentRow = [];
+          currentField = '';
+        } else if (char === '\n') {
+          currentRow.push(currentField.trim());
+          if (currentRow.some(cell => cell.length > 0)) rows.push(currentRow);
+          currentRow = [];
+          currentField = '';
+        } else {
+          currentField += char;
+        }
+      }
+    }
+
+    if (currentField || currentRow.length > 0) {
+      currentRow.push(currentField.trim());
+      if (currentRow.some(cell => cell.length > 0)) rows.push(currentRow);
+    }
+
+    return rows;
+  }
+
+  function normalizarClaveColumna(str) {
+    return (str || '')
+      .toString()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]/g, '');
+  }
+
+  /**
+   * Convierte filas de Google Sheets en objetos normalizados según la estructura actual A-K:
+   * A: Producto
+   * B: Precio USA ($)
+   * C: Cantidad
+   * D: Peso KG
+   * E: Flete x KG
+   * F: Reempaque
+   * G: Precio Dólar (T.C)
+   * H: Costo Perú
+   * I: Precio Venta (S/.)
+   * J: Costos extras
+   * K: Ganancia (S/.)
+   */
+  function convertirFilasACatalogo(rows) {
+    if (!rows || rows.length < 2) return [];
+
+    const headers = rows[0].map(h => normalizarClaveColumna(h));
+    const encontrarIndice = (posibles) => headers.findIndex(h => posibles.includes(h));
+
+    const idxMap = {
+      // Mapeo exacto de los nombres actuales del Sheet (A-K) + columna opcional imagen:
+      producto: encontrarIndice(['producto', 'perfume', 'nombre']),
+      precioUSA: encontrarIndice(['preciousa', 'precio_usa', 'preciounitariousa']),
+      cantidad: encontrarIndice(['cantidad', 'cant', 'unidades']),
+      pesoKg: encontrarIndice(['pesokg', 'peso', 'peso_kg']),
+      fleteKg: encontrarIndice(['fletexkg', 'fletekg', 'flete_x_kg']),
+      reempaque: encontrarIndice(['reempaque']),
+      precioDolarTC: encontrarIndice(['preciodolartc', 'preciodolar', 'tc']),
+      costoPeru: encontrarIndice(['costoperu', 'costo_peru', 'costopuestoperu']),
+      precioVenta: encontrarIndice(['precioventas', 'precioventa', 'precio_venta']),
+      costosExtras: encontrarIndice(['costosextras', 'costosextraslocales', 'extras']),
+      ganancia: encontrarIndice(['ganancias', 'ganancia', 'ganancia_neta']),
+      imagen: encontrarIndice(['imagen', 'img', 'foto', 'image', 'urlimagen', 'imagenurl', 'fotourl'])
+    };
+
+    // Respaldo estricto por posición de columnas A-K (0 a 10):
+    if (idxMap.producto === -1 && headers.length > 0) idxMap.producto = 0;
+    if (idxMap.precioUSA === -1 && headers.length > 1) idxMap.precioUSA = 1;
+    if (idxMap.cantidad === -1 && headers.length > 2) idxMap.cantidad = 2;
+    if (idxMap.pesoKg === -1 && headers.length > 3) idxMap.pesoKg = 3;
+    if (idxMap.fleteKg === -1 && headers.length > 4) idxMap.fleteKg = 4;
+    if (idxMap.reempaque === -1 && headers.length > 5) idxMap.reempaque = 5;
+    if (idxMap.precioDolarTC === -1 && headers.length > 6) idxMap.precioDolarTC = 6;
+    if (idxMap.costoPeru === -1 && headers.length > 7) idxMap.costoPeru = 7;
+    if (idxMap.precioVenta === -1 && headers.length > 8) idxMap.precioVenta = 8;
+    if (idxMap.costosExtras === -1 && headers.length > 9) idxMap.costosExtras = 9;
+    if (idxMap.ganancia === -1 && headers.length > 10) idxMap.ganancia = 10;
+
+    const limpiarNumero = (val, valorDefault = 0) => {
+      if (val === undefined || val === null || val === '') return valorDefault;
+      let str = val.toString().trim();
+      str = str.replace(/S\/\.?/gi, '').replace(/\$/g, '').replace(/[a-zA-Z]/g, '').replace(/,/g, '').trim();
+      const num = parseFloat(str);
+      return isNaN(num) ? valorDefault : num;
+    };
+
+    const productos = [];
+    for (let i = 1; i < rows.length; i++) {
+      const row = rows[i];
+      const nombre = idxMap.producto !== -1 ? (row[idxMap.producto] || '').trim() : '';
+      if (!nombre) continue;
+
+      productos.push({
+        id: `gs-${i}`,
+        // Campos visibles en el catálogo:
+        producto: nombre,
+        precioUSA: idxMap.precioUSA !== -1 ? limpiarNumero(row[idxMap.precioUSA], 0) : 0,
+        costoPeru: idxMap.costoPeru !== -1 ? limpiarNumero(row[idxMap.costoPeru], 0) : 0,
+        precioVenta: idxMap.precioVenta !== -1 ? limpiarNumero(row[idxMap.precioVenta], 0) : 0,
+        ganancia: idxMap.ganancia !== -1 ? limpiarNumero(row[idxMap.ganancia], 0) : 0,
+
+        // Datos internos mantenidos:
+        cantidad: idxMap.cantidad !== -1 ? Math.max(1, parseInt(row[idxMap.cantidad], 10) || 1) : 1,
+        pesoKg: idxMap.pesoKg !== -1 ? limpiarNumero(row[idxMap.pesoKg], 0.6) : 0.6,
+        fleteKg: idxMap.fleteKg !== -1 ? limpiarNumero(row[idxMap.fleteKg], 9.50) : 9.50,
+        reempaque: idxMap.reempaque !== -1 ? limpiarNumero(row[idxMap.reempaque], 1.00) : 1.00,
+        tc: idxMap.precioDolarTC !== -1 ? limpiarNumero(row[idxMap.precioDolarTC], 3.40) : 3.40,
+        costosExtras: idxMap.costosExtras !== -1 ? limpiarNumero(row[idxMap.costosExtras], 10.00) : 10.00,
+        imagen: (idxMap.imagen !== -1 && row[idxMap.imagen]) ? (row[idxMap.imagen] || '').trim() : ''
+      });
+    }
+
+    return productos;
+  }
+
+  function construirURLGoogleSheetCSV(input) {
+    const raw = (input && input.trim()) ? input.trim() : DEFAULT_SHEETS_CSV_URL;
+
+    if (raw.includes('/pub') || raw.includes('/export?format=csv') || raw.includes('/gviz/tq?tqx=out:csv') || raw.includes('output=csv')) {
+      const sep = raw.includes('?') ? '&' : '?';
+      return `${raw}${sep}_t=${Date.now()}`;
+    }
+
+    const match = raw.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+    const sheetId = (match && match[1] && match[1] !== 'e') ? match[1] : (/^[a-zA-Z0-9-_]{20,}$/.test(raw) ? raw : null);
+
+    if (!sheetId) return `${raw}${raw.includes('?') ? '&' : '?'}_t=${Date.now()}`;
+
+    const gidMatch = raw.match(/[#&?]gid=([0-9]+)/);
+    const gidParam = (gidMatch && gidMatch[1]) ? `&gid=${gidMatch[1]}` : '';
+
+    return `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv${gidParam}&_t=${Date.now()}`;
+  }
+
+  /**
+   * Renderiza las tarjetas del Catálogo en modo SOLO CONSULTA — Estilo Perfumería Luxury.
+   * Muestra todos los 11 datos requeridos sin eliminar ninguno:
+   * - Encabezado: Producto + Inversión Precio USA al lado
+   * - Bloque Principal: Costo Perú, Venta, Ganancia
+   * - Pie: Datos internos de cálculo en una sola línea compacta
+   * - Soporte de imagen opcional
+   */
+  function renderizarCatalogo(productosParaMostrar, terminoBusqueda = '') {
+    if (!catalogoElements.lista) return;
+
+    catalogoElements.lista.innerHTML = '';
+    const total = productosParaMostrar.length;
+
+    if (terminoBusqueda) {
+      catalogoElements.contador.textContent = `${total} resultado${total === 1 ? '' : 's'} para "${terminoBusqueda}"`;
+    } else {
+      catalogoElements.contador.textContent = `${total} perfume${total === 1 ? '' : 's'} disponible${total === 1 ? '' : 's'}`;
+    }
+
+    if (total === 0) {
+      catalogoElements.empty.style.display = 'flex';
+      if (terminoBusqueda) {
+        catalogoElements.emptyTitle.textContent = `No se encontraron perfumes para "${terminoBusqueda}"`;
+        catalogoElements.emptyDesc.textContent = 'Intenta buscando por marca o nombre (ej: 9 Am, Dior, Club de Nuit).';
+      } else {
+        catalogoElements.emptyTitle.textContent = 'Catálogo vacío';
+        catalogoElements.emptyDesc.textContent = 'No hay filas en la hoja de Google Sheets.';
+      }
+      return;
+    }
+
+    catalogoElements.empty.style.display = 'none';
+
+    productosParaMostrar.forEach((item) => {
+      const card = document.createElement('article');
+      card.className = 'catalog-card';
+      card.setAttribute('data-id', item.id);
+
+      const gananciaPositiva = (item.ganancia >= 0);
+      const tieneImagen = item.imagen && (item.imagen.startsWith('http://') || item.imagen.startsWith('https://'));
+
+      card.innerHTML = `
+        <!-- 1. Encabezado: Perfume (Icono o Mini imagen) + Nombre y Precio USA cercano -->
+        <div class="card-top-section">
+          <div class="card-title-group">
+            ${tieneImagen ? `
+              <img src="${escapeHTML(item.imagen)}" alt="${escapeHTML(item.producto)}" class="card-mini-thumb" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='inline-flex';" loading="lazy">
+              <span class="card-perfume-icon" style="display:none;">🧴</span>
+            ` : `
+              <span class="card-perfume-icon">🧴</span>
+            `}
+            <h3 class="card-product-name" title="${escapeHTML(item.producto)}">${escapeHTML(item.producto)}</h3>
+          </div>
+          <div class="card-usa-tag">
+            <span class="usa-lbl">USA</span>
+            <span class="usa-val">${formatUSD(item.precioUSA)}</span>
+          </div>
+        </div>
+
+        <!-- 2. Bloque Principal: Sección visual con 3 valores grandes -->
+        <div class="card-trio-grid">
+          <div class="trio-item trio-costo">
+            <span class="trio-lbl">Costo Perú</span>
+            <span class="trio-val val-costo">${formatPEN(item.costoPeru)}</span>
+          </div>
+          <div class="trio-item trio-venta">
+            <span class="trio-lbl">Venta</span>
+            <span class="trio-val val-venta">${formatPEN(item.precioVenta)}</span>
+          </div>
+          <div class="trio-item trio-ganancia ${gananciaPositiva ? 'is-profit' : 'is-loss'}">
+            <span class="trio-lbl">Ganancia</span>
+            <span class="trio-val val-ganancia">${formatPEN(item.ganancia)}</span>
+          </div>
+        </div>
+
+        <!-- 3. Datos Internos: Una sola línea inferior compacta y discreta -->
+        <div class="card-internal-footer">
+          <span class="calc-line-text">${item.cantidad}ud • ${Number(item.pesoKg || 0).toFixed(2)}kg • Flete ${formatUSD(item.fleteKg)} • Rep ${formatUSD(item.reempaque)} • TC ${Number(item.tc || 0).toFixed(2)} • Extras ${formatPEN(item.costosExtras)}</span>
+        </div>
+      `;
+
+      catalogoElements.lista.appendChild(card);
+    });
+  }
+
+  /**
+   * Filtrado en tiempo real con el Buscador
+   */
+  function filtrarCatalogo() {
+    if (!catalogoElements.busqueda) return;
+    const termino = catalogoElements.busqueda.value.trim();
+
+    if (!termino) {
+      if (catalogoElements.btnLimpiar) catalogoElements.btnLimpiar.style.display = 'none';
+      renderizarCatalogo(catalogoProductos, '');
+      return;
+    }
+
+    if (catalogoElements.btnLimpiar) catalogoElements.btnLimpiar.style.display = 'flex';
+
+    const normalizar = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const terminoNorm = normalizar(termino);
+
+    const filtrados = catalogoProductos.filter((item) => {
+      const nombreNorm = normalizar(item.producto);
+      return nombreNorm.includes(terminoNorm);
+    });
+
+    renderizarCatalogo(filtrados, termino);
+  }
+
+  /**
+   * Carga y sincronización con Google Sheets (Caché local + Red)
+   */
+  async function cargarCatalogo(forzarRed = false) {
+    if (catalogoCargando) return;
+    catalogoCargando = true;
+
+    if (catalogoElements.btnSync) catalogoElements.btnSync.classList.add('is-spinning');
+    if (catalogoElements.syncDot) catalogoElements.syncDot.className = 'sync-status-dot is-syncing';
+    if (catalogoElements.syncText) catalogoElements.syncText.textContent = 'Consultando Google Sheets...';
+
+    // 1. Cargar caché previo
+    if (!forzarRed) {
+      try {
+        const cacheGuardada = localStorage.getItem(STORAGE_KEYS.CATALOGO_CACHE);
+        if (cacheGuardada) {
+          const parsed = JSON.parse(cacheGuardada);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            catalogoProductos = parsed;
+            renderizarCatalogo(catalogoProductos);
+            const ultima = localStorage.getItem(STORAGE_KEYS.CATALOGO_LAST_SYNC) || 'Previa';
+            if (catalogoElements.syncDot) catalogoElements.syncDot.className = 'sync-status-dot';
+            if (catalogoElements.syncText) catalogoElements.syncText.textContent = `Sincronizado (${ultima})`;
+          }
+        }
+      } catch (e) {
+        console.warn('Error al leer caché local del catálogo', e);
+      }
+    }
+
+    // 2. Obtener URL configurada de Google Sheets
+    const sheetsUrlGuardada = localStorage.getItem(STORAGE_KEYS.SHEETS_URL);
+    const urlCSV = construirURLGoogleSheetCSV(sheetsUrlGuardada);
+
+    if (!urlCSV) {
+      if (catalogoProductos.length === 0) {
+        catalogoProductos = [...CATALOGO_DEFAULT];
+        localStorage.setItem(STORAGE_KEYS.CATALOGO_CACHE, JSON.stringify(catalogoProductos));
+        renderizarCatalogo(catalogoProductos);
+      }
+      if (catalogoElements.syncDot) catalogoElements.syncDot.className = 'sync-status-dot';
+      if (catalogoElements.syncText) catalogoElements.syncText.textContent = 'Catálogo base activo';
+      if (catalogoElements.btnSync) catalogoElements.btnSync.classList.remove('is-spinning');
+      catalogoCargando = false;
+      return;
+    }
+
+    // 3. Petición en vivo a Google Sheets
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+      const response = await fetch(urlCSV, {
+        method: 'GET',
+        signal: controller.signal,
+        cache: 'no-cache'
+      });
+      clearTimeout(timeoutId);
+
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+      const csvText = await response.text();
+      const rows = parsearCSV(csvText);
+      const items = convertirFilasACatalogo(rows);
+
+      if (items.length > 0) {
+        catalogoProductos = items;
+        localStorage.setItem(STORAGE_KEYS.CATALOGO_CACHE, JSON.stringify(items));
+        const horaSync = new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+        localStorage.setItem(STORAGE_KEYS.CATALOGO_LAST_SYNC, horaSync);
+
+        renderizarCatalogo(catalogoProductos);
+        if (catalogoElements.syncDot) catalogoElements.syncDot.className = 'sync-status-dot';
+        if (catalogoElements.syncText) catalogoElements.syncText.textContent = `Sincronizado (${horaSync})`;
+        showToast(`Catálogo sincronizado: ${items.length} perfumes cargados`);
+      } else {
+        throw new Error('La hoja no contiene filas con datos');
+      }
+    } catch (err) {
+      console.warn('[DUNES CATÁLOGO] Error al conectar con Google Sheets:', err);
+      if (catalogoProductos.length === 0) {
+        catalogoProductos = [...CATALOGO_DEFAULT];
+        renderizarCatalogo(catalogoProductos);
+      }
+      if (catalogoElements.syncDot) catalogoElements.syncDot.className = 'sync-status-dot is-offline';
+      if (catalogoElements.syncText) catalogoElements.syncText.textContent = 'Modo local (Sin conexión a Sheets)';
+      if (forzarRed) {
+        showToast('No se pudo conectar a Google Sheets. Mostrando datos locales.', 'info');
+      }
+    } finally {
+      if (catalogoElements.btnSync) catalogoElements.btnSync.classList.remove('is-spinning');
+      catalogoCargando = false;
+    }
+  }
+
+  /**
+   * Probar conexión con Google Sheets desde el Modal de Configuración
+   */
+  async function probarConexionSheets() {
+    const url = sheetsConfigElements.urlInput ? sheetsConfigElements.urlInput.value.trim() : '';
+    if (!url) {
+      if (sheetsConfigElements.status) {
+        sheetsConfigElements.status.textContent = '⚠️ Ingresa el enlace o ID de tu Google Sheet';
+        sheetsConfigElements.status.style.color = 'var(--crimson-loss)';
+      }
+      return;
+    }
+
+    if (sheetsConfigElements.status) {
+      sheetsConfigElements.status.textContent = '⏳ Probando conexión con Google Sheets...';
+      sheetsConfigElements.status.style.color = 'var(--gold-light)';
+    }
+
+    const urlCSV = construirURLGoogleSheetCSV(url);
+    if (!urlCSV) {
+      if (sheetsConfigElements.status) {
+        sheetsConfigElements.status.textContent = '⚠️ Enlace no reconocido. Pega el enlace de Google Sheets.';
+        sheetsConfigElements.status.style.color = 'var(--crimson-loss)';
+      }
+      return;
+    }
+
+    try {
+      const res = await fetch(urlCSV, { method: 'GET', cache: 'no-cache' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const text = await res.text();
+      const rows = parsearCSV(text);
+      const items = convertirFilasACatalogo(rows);
+
+      if (items.length > 0) {
+        localStorage.setItem(STORAGE_KEYS.SHEETS_URL, url);
+        catalogoProductos = items;
+        localStorage.setItem(STORAGE_KEYS.CATALOGO_CACHE, JSON.stringify(items));
+        const hora = new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+        localStorage.setItem(STORAGE_KEYS.CATALOGO_LAST_SYNC, hora);
+
+        if (sheetsConfigElements.status) {
+          sheetsConfigElements.status.textContent = `✔ Conectado exitosamente (${items.length} perfumes leídos)`;
+          sheetsConfigElements.status.style.color = 'var(--emerald-profit)';
+        }
+        renderizarCatalogo(catalogoProductos);
+        showToast(`Google Sheets sincronizado: ${items.length} perfumes`);
+      } else {
+        throw new Error('No se detectaron columnas con la estructura esperada');
+      }
+    } catch (err) {
+      if (sheetsConfigElements.status) {
+        sheetsConfigElements.status.textContent = '⚠️ No se pudo leer la hoja. Asegúrate de compartirla como "Cualquier persona con el enlace puede ver".';
+        sheetsConfigElements.status.style.color = 'var(--crimson-loss)';
+      }
+    }
+  }
+
+  /**
+   * ========================================================================
    * ASIGNACIÓN DE EVENTOS
    * ========================================================================
    */
+
+  // Navegación por pestañas
+  navTabs.forEach((tab) => {
+    tab.addEventListener('click', (e) => {
+      const targetTab = e.currentTarget.getAttribute('data-tab');
+      cambiarPestana(targetTab);
+    });
+  });
+
+  // Buscador del Catálogo
+  if (catalogoElements.busqueda) {
+    catalogoElements.busqueda.addEventListener('input', filtrarCatalogo);
+  }
+
+  if (catalogoElements.btnLimpiar) {
+    catalogoElements.btnLimpiar.addEventListener('click', () => {
+      catalogoElements.busqueda.value = '';
+      filtrarCatalogo();
+      catalogoElements.busqueda.focus();
+    });
+  }
+
+  if (catalogoElements.btnSync) {
+    catalogoElements.btnSync.addEventListener('click', () => {
+      cargarCatalogo(true);
+    });
+  }
+
+  if (sheetsConfigElements.btnProbar) {
+    sheetsConfigElements.btnProbar.addEventListener('click', probarConexionSheets);
+  }
 
   // Cálculo y sincronización en tiempo real
   Object.entries(inputs).forEach(([key, input]) => {
     if (!input) return;
     if (key === 'cantidad') {
-      // Cuando el usuario modifica la cantidad:
-      // Reempaque total = Cantidad de perfumes × costo reempaque por perfume
       const onCantidadChange = () => {
         const cant = Math.max(1, parseInt(inputs.cantidad.value, 10) || 1);
         const configBase = obtenerConfigBase();
@@ -930,9 +1605,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ========================================================================
   // ARRANQUE DE LA APLICACIÓN
+  // REQUISITO CRÍTICO: La pantalla inicial SIEMPRE será el Cotizador.
   // ========================================================================
   cargarValoresIniciales();
   ejecutarCalculo();
   renderizarHistorial();
-  console.log('[DUNES PARFUMS] Inicializado con memoria inteligente y configuración activa.');
+  cargarCatalogo(false);
+  cambiarPestana('cotizador'); // Pantalla inicial garantizada: Cotizador
+
+  console.log('[DUNES PARFUMS] Inicializado. Módulo principal activo: Cotizador.');
 });
