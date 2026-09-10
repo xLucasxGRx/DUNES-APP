@@ -1636,56 +1636,110 @@ body {
 .catalog-section {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
-  padding: 0.5rem 0.75rem 0.75rem;
+  gap: 0.38rem;
+  padding: 0.55rem 0.75rem 0.75rem;
 }
 
-.catalog-header-bar {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.4rem;
-  padding-bottom: 0.3rem;
-  border-bottom: 1px solid var(--border-subtle);
-  flex-wrap: wrap;
-}
-
+/* 1. Título principal centrado con mayor protagonismo */
 .catalog-main-title {
   font-family: var(--font-serif);
-  font-size: 0.95rem;
+  font-size: 1.16rem;
   font-weight: 700;
   color: var(--text-primary);
-  letter-spacing: 0.03em;
-  line-height: 1.2;
+  letter-spacing: 0.08em;
+  line-height: 1.25;
   margin: 0;
+  text-align: center;
+  width: 100%;
+  padding-top: 0.1rem;
+  padding-bottom: 0.2rem;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+/* 2. Estado del catálogo (información comercial cliente destacada) */
+.catalog-commercial-status {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  padding: 0.05rem 0 0.25rem;
+}
+
+.catalog-counter {
+  color: var(--gold-light);
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  line-height: 1.3;
+  letter-spacing: 0.03em;
+}
+
+.catalog-counter .catalog-stat-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
   white-space: nowrap;
 }
 
+.catalog-counter .stat-disp {
+  color: #10b981;
+  font-weight: 600;
+}
+
+.catalog-counter .stat-disp strong {
+  font-weight: 700;
+  color: #34d399;
+}
+
+.catalog-counter .stat-agot {
+  color: #ef4444;
+  font-weight: 600;
+}
+
+.catalog-counter .stat-agot strong {
+  font-weight: 700;
+  color: #f87171;
+}
+
+.catalog-counter .catalog-stat-sep {
+  opacity: 0.35;
+  color: var(--text-muted);
+  margin: 0 0.15rem;
+  font-size: 0.72rem;
+}
+
+/* 3. Barra de sincronización (información secundaria discreta) */
 .catalog-sync-wrapper {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
+  width: 100%;
   gap: 0.4rem;
-  flex-wrap: nowrap;
-  flex-shrink: 0;
+  padding: 0.15rem 0.1rem 0.35rem;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.12);
+  margin-bottom: 0.1rem;
 }
 
 .catalog-sync-info {
   display: inline-flex;
   align-items: center;
-  gap: 0.28rem;
-  font-size: 0.68rem;
-  color: var(--text-secondary);
+  gap: 0.24rem;
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  opacity: 0.88;
   white-space: nowrap;
 }
 
 .sync-status-dot {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
   background: var(--emerald-profit);
-  box-shadow: 0 0 5px var(--emerald-profit);
+  box-shadow: 0 0 4px var(--emerald-profit);
   transition: all 0.2s ease;
   flex-shrink: 0;
 }
@@ -1707,26 +1761,31 @@ body {
 }
 
 .btn-catalog-sync {
-  background: rgba(22, 18, 15, 0.9);
-  border: 1px solid var(--gold-border);
-  color: var(--gold-light);
-  padding: 0.18rem 0.52rem;
+  background: rgba(22, 18, 15, 0.75);
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  color: var(--text-secondary);
+  padding: 0.14rem 0.45rem;
   border-radius: var(--radius-sm);
   font-family: var(--font-sans);
-  font-size: 0.68rem;
+  font-size: 0.64rem;
   font-weight: 500;
   display: inline-flex;
   align-items: center;
-  gap: 0.24rem;
+  gap: 0.22rem;
   cursor: pointer;
   transition: var(--transition);
   flex-shrink: 0;
 }
 
 .btn-catalog-sync:hover {
-  background: rgba(201, 162, 39, 0.15);
+  background: rgba(201, 162, 39, 0.14);
   border-color: var(--gold-light);
+  color: var(--gold-light);
   transform: translateY(-1px);
+}
+
+.btn-catalog-sync:active {
+  transform: scale(0.97);
 }
 
 .btn-catalog-sync.is-spinning .sync-icon {
@@ -1739,19 +1798,21 @@ body {
 }
 
 /* ==========================================================================
-   BUSCADOR DEL CATÁLOGO — COMPACTO
+   4. FILA DE BUSCADOR Y BOTÓN FILTROS — UNA SOLA LÍNEA RESPONSIVE
    ========================================================================== */
-.catalog-search-container {
+.catalog-search-filter-row {
   display: flex;
-  flex-direction: column;
-  gap: 0.28rem;
+  align-items: center;
+  gap: 0.45rem;
+  width: 100%;
 }
 
 .catalog-search-bar {
   position: relative;
   display: flex;
   align-items: center;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
 }
 
 .catalog-search-icon {
@@ -1771,6 +1832,7 @@ body {
   font-family: var(--font-sans);
   font-size: 0.82rem;
   padding: 0.46rem 1.8rem 0.46rem 2.1rem;
+  height: 34px;
   min-height: 34px;
   box-sizing: border-box;
   transition: var(--transition);
@@ -1810,65 +1872,28 @@ body {
   color: var(--gold-light);
 }
 
-.catalog-meta-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.72rem;
-  padding: 0 0.1rem;
-  gap: 0.35rem;
-}
-
-.catalog-counter {
-  color: var(--gold-light);
-  font-weight: 500;
-  display: inline-flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.3rem;
-  font-size: 0.72rem;
-  line-height: 1.25;
-}
-
-.catalog-counter .catalog-stat-item {
-  display: inline-flex;
-  align-items: center;
-  white-space: nowrap;
-}
-
-.catalog-counter .stat-disp {
-  color: #10b981;
-}
-
-.catalog-counter .stat-agot {
-  color: #ef4444;
-}
-
-.catalog-counter .catalog-stat-sep {
-  opacity: 0.35;
-  color: var(--text-muted);
-  margin: 0 0.05rem;
-}
-
-/* Botón Desplegable de Filtros */
+/* Botón Desplegable de Filtros — Compacto y alineado verticalmente con el buscador */
 .btn-toggle-filters {
-  background: rgba(25, 20, 16, 0.9);
+  background: rgba(25, 20, 16, 0.85);
   border: 1px solid rgba(212, 175, 55, 0.28);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   color: var(--gold-light);
   font-family: var(--font-sans);
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   font-weight: 500;
-  padding: 0.2rem 0.52rem;
-  min-height: 26px;
+  padding: 0 0.6rem;
+  height: 34px;
+  min-height: 34px;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.25rem;
   cursor: pointer;
   transition: var(--transition);
   white-space: nowrap;
   flex-shrink: 0;
   user-select: none;
+  box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -1890,6 +1915,7 @@ body {
 
 .btn-toggle-filters.has-active-filters {
   border-color: var(--gold-primary);
+  color: var(--gold-light);
 }
 
 .toggle-arrow {

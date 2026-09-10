@@ -322,39 +322,40 @@
       <!-- VISTA 2: CATÁLOGO (SOLO CONSULTA CONECTADO A GOOGLE SHEETS) -->
       <div id="vista-catalogo" class="app-view is-hidden">
         <section class="section-card catalog-section" id="seccion-catalogo">
-          <!-- Encabezado del Catálogo Compacto -->
-          <div class="catalog-header-bar">
-            <h2 class="catalog-main-title">CATÁLOGO DE PERFUMES</h2>
+          <!-- 1. Título principal centrado con protagonismo -->
+          <h2 class="catalog-main-title">CATÁLOGO DE PERFUMES</h2>
 
-            <!-- Sincronización y Estado Google Sheets -->
-            <div class="catalog-sync-wrapper">
-              <div class="catalog-sync-info">
-                <span class="sync-status-dot" id="catalogo-sync-dot"></span>
-                <span class="sync-status-text" id="catalogo-sync-text">Sincronizado</span>
-              </div>
-              <button id="btn-sincronizar-catalogo" type="button" class="btn-catalog-sync" title="Actualizar datos desde Google Sheets" aria-label="Actualizar catálogo">
-                <span class="sync-icon">🔄</span>
-                <span>Actualizar</span>
-              </button>
-            </div>
+          <!-- 2. Estado del catálogo (información comercial cliente) -->
+          <div class="catalog-commercial-status">
+            <span class="catalog-counter" id="catalogo-contador">Consultando Google Sheets...</span>
           </div>
 
-          <!-- Buscador Rápido Reactivo y Barra de Control -->
-          <div class="catalog-search-container">
+          <!-- 3. Barra de sincronización (información secundaria discreta) -->
+          <div class="catalog-sync-wrapper">
+            <div class="catalog-sync-info">
+              <span class="sync-status-dot" id="catalogo-sync-dot"></span>
+              <span class="sync-status-text" id="catalogo-sync-text">Sincronizado</span>
+            </div>
+            <button id="btn-sincronizar-catalogo" type="button" class="btn-catalog-sync" title="Actualizar datos desde Google Sheets" aria-label="Actualizar catálogo">
+              <span class="sync-icon">🔄</span>
+              <span>Actualizar</span>
+            </button>
+          </div>
+
+          <!-- 4. Fila de Buscador y Filtros juntos -->
+          <div class="catalog-search-filter-row">
             <div class="catalog-search-bar">
               <span class="catalog-search-icon">🔍</span>
-              <input id="catalogo-busqueda" type="text" placeholder="Buscar perfume, marca o tamaño (ej: Dior)..." autocomplete="off" aria-label="Buscar perfume en catálogo">
+              <input id="catalogo-busqueda" type="text" placeholder="Buscar perfume, marca o tamaño..." autocomplete="off" aria-label="Buscar perfume en catálogo">
               <button id="catalogo-btn-limpiar-busqueda" type="button" class="btn-clear-search" style="display: none;" title="Limpiar búsqueda" aria-label="Limpiar búsqueda">✕</button>
             </div>
-            <div class="catalog-meta-row">
-              <span class="catalog-counter" id="catalogo-contador">Consultando Google Sheets...</span>
-              <button type="button" id="btn-toggle-filtros" class="btn-toggle-filters" aria-expanded="false" aria-controls="catalog-filters-collapsible" title="Mostrar u ocultar filtros">
-                <span class="toggle-icon">⚙</span>
-                <span class="toggle-text">Filtros</span>
-                <span class="toggle-arrow" id="toggle-filtros-arrow">▼</span>
-                <span class="toggle-active-dot" id="toggle-filtros-dot" style="display: none;" title="Filtros aplicados"></span>
-              </button>
-            </div>
+
+            <button type="button" id="btn-toggle-filtros" class="btn-toggle-filters" aria-expanded="false" aria-controls="catalog-filters-collapsible" title="Mostrar u ocultar filtros">
+              <span class="toggle-icon">⚙</span>
+              <span class="toggle-text">Filtros</span>
+              <span class="toggle-arrow" id="toggle-filtros-arrow">▼</span>
+              <span class="toggle-active-dot" id="toggle-filtros-dot" style="display: none;" title="Filtros aplicados"></span>
+            </button>
           </div>
 
           <!-- Filtros de Categoría, Género y Estado (Desplegable) -->

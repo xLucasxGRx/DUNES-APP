@@ -173,8 +173,8 @@ assert(appJsCode.includes('filtroEstadoActivo'), 'app.js debe manejar filtroEsta
 assert(appJsCode.includes('btn-toggle-filtros'), 'app.js debe controlar btn-toggle-filtros');
 assert(appJsCode.includes('stat-disp'), 'app.js debe generar indicador stat-disp');
 assert(appJsCode.includes('stat-agot'), 'app.js debe generar indicador stat-agot');
-assert(appJsCode.includes('disponible'), 'app.js debe incluir etiqueta disponible en el contador');
-assert(appJsCode.includes('agotado'), 'app.js debe incluir etiqueta agotado en el contador');
-console.log('✔ [PASS] Mapeo de columnas, acordeón de filtros y contadores compactos en app.js verificado');
+assert(appJsCode.includes('DISPONIBLES'), 'app.js debe mostrar DISPONIBLES en el contador');
+assert(appJsCode.includes('AGOTADOS'), 'app.js debe mostrar AGOTADOS en el contador');
+console.log('✔ [PASS] Mapeo de columnas, acordeón de filtros y contadores limpios (🟢 DISPONIBLES / 🔴 AGOTADOS) verificado');
 
 console.log('\n🎉 TODAS LAS VALIDACIONES DE FILTROS PASARON AL 100%');

@@ -1328,11 +1328,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     catalogoElements.contador.innerHTML = `
-      <span class="catalog-stat-item"><strong>${total}</strong> perfume${total === 1 ? '' : 's'}</span>
+      <span class="catalog-stat-item stat-disp">🟢 <strong>${disponiblesCount}</strong> DISPONIBLES</span>
       <span class="catalog-stat-sep">•</span>
-      <span class="catalog-stat-item stat-disp">🟢<strong>${disponiblesCount}</strong> disponible${disponiblesCount === 1 ? '' : 's'}</span>
-      <span class="catalog-stat-sep">•</span>
-      <span class="catalog-stat-item stat-agot">🔴<strong>${agotadosCount}</strong> agotado${agotadosCount === 1 ? '' : 's'}</span>
+      <span class="catalog-stat-item stat-agot">🔴 <strong>${agotadosCount}</strong> AGOTADOS</span>
     `;
 
     if (total === 0) {
