@@ -161,9 +161,10 @@ assert.strictEqual(metricasGlobal.disponibles, 3);
 assert.strictEqual(metricasGlobal.agotados, 3);
 console.log('✔ [PASS] Cálculo dinámico de métricas: Total catálogo, Disponibles y Agotados');
 
-// 4. Test de Mapeo y Acordeón en index.html y app.js
+// 4. Test de Mapeo, Acordeón y Nuevo Contador de Resultados
 assert(html.includes('id="btn-toggle-filtros"'), 'index.html debe tener el botón btn-toggle-filtros');
 assert(html.includes('id="catalog-filters-collapsible"'), 'index.html debe tener el panel colapsable catalog-filters-collapsible');
+assert(html.includes('id="catalogo-contador-resultados"'), 'index.html debe tener el elemento catalogo-contador-resultados');
 
 const appJsCode = fs.readFileSync('app.js', 'utf8');
 assert(appJsCode.includes('categoria: encontrarIndice'), 'app.js debe mapear categoria');
@@ -171,10 +172,26 @@ assert(appJsCode.includes('genero: encontrarIndice'), 'app.js debe mapear genero
 assert(appJsCode.includes('estadoCatalogo: encontrarIndice'), 'app.js debe mapear estadoCatalogo');
 assert(appJsCode.includes('filtroEstadoActivo'), 'app.js debe manejar filtroEstadoActivo');
 assert(appJsCode.includes('btn-toggle-filtros'), 'app.js debe controlar btn-toggle-filtros');
+assert(appJsCode.includes('actualizarContadorInventarioGeneral'), 'app.js debe tener actualizarContadorInventarioGeneral');
 assert(appJsCode.includes('stat-disp'), 'app.js debe generar indicador stat-disp');
 assert(appJsCode.includes('stat-agot'), 'app.js debe generar indicador stat-agot');
-assert(appJsCode.includes('DISPONIBLES'), 'app.js debe mostrar DISPONIBLES en el contador');
-assert(appJsCode.includes('AGOTADOS'), 'app.js debe mostrar AGOTADOS en el contador');
-console.log('✔ [PASS] Mapeo de columnas, acordeón de filtros y contadores limpios (🟢 DISPONIBLES / 🔴 AGOTADOS) verificado');
+assert(appJsCode.includes('DISPONIBLES'), 'app.js debe mostrar DISPONIBLES en el contador principal');
+assert(appJsCode.includes('AGOTADOS'), 'app.js debe mostrar AGOTADOS en el contador principal');
+assert(appJsCode.includes('perfumes encontrados'), 'app.js debe generar texto "perfumes encontrados"');
+assert(appJsCode.includes('perfume encontrado'), 'app.js debe generar texto "perfume encontrado" en singular');
+
+// Test de separación: Al filtrar, el inventario real permanece fijo y los resultados cambian
+const globalMetricsBefore = calcularMetricas(mockProductos);
+const resultadosFiltrados = filtrar(mockProductos, 'todos', 'todos', 'todos', 'good girl');
+assert.strictEqual(resultadosFiltrados.length, 1);
+const textoResultados = resultadosFiltrados.length === 1 ? '1 perfume encontrado' : `${resultadosFiltrados.length} perfumes encontrados`;
+assert.strictEqual(textoResultados, '1 perfume encontrado');
+// El inventario general sigue siendo el total de mockProductos (3 disp, 3 agot)
+const globalMetricsAfter = calcularMetricas(mockProductos);
+assert.strictEqual(globalMetricsBefore.disponibles, globalMetricsAfter.disponibles);
+assert.strictEqual(globalMetricsBefore.agotados, globalMetricsAfter.agotados);
+
+console.log('✔ [PASS] Separación verificada: Contador superior fijo con inventario general y contador dinámico de resultados');
 
 console.log('\n🎉 TODAS LAS VALIDACIONES DE FILTROS PASARON AL 100%');
+

@@ -127,6 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
     busqueda: document.getElementById('catalogo-busqueda'),
     btnLimpiar: document.getElementById('catalogo-btn-limpiar-busqueda'),
     contador: document.getElementById('catalogo-contador'),
+    contadorResultados: document.getElementById('catalogo-contador-resultados'),
     lista: document.getElementById('catalogo-lista'),
     empty: document.getElementById('catalogo-empty'),
     emptyTitle: document.getElementById('catalogo-empty-title'),
@@ -1308,17 +1309,15 @@ document.addEventListener('DOMContentLoaded', () => {
    * - Pie: Datos internos de cálculo en una sola línea compacta
    * - Soporte de imagen opcional
    */
-  function renderizarCatalogo(productosParaMostrar, terminoBusqueda = '') {
-    if (!catalogoElements.lista) return;
+  function actualizarContadorInventarioGeneral() {
+    if (!catalogoElements.contador) return;
 
-    catalogoElements.lista.innerHTML = '';
-    const total = productosParaMostrar.length;
-
-    // Cálculo dinámico de métricas del catálogo: Total, Disponibles y Agotados
     let disponiblesCount = 0;
     let agotadosCount = 0;
-    for (let i = 0; i < productosParaMostrar.length; i++) {
-      const p = productosParaMostrar[i];
+    const baseProductos = (catalogoProductos && catalogoProductos.length > 0) ? catalogoProductos : CATALOGO_DEFAULT;
+
+    for (let i = 0; i < baseProductos.length; i++) {
+      const p = baseProductos[i];
       const agot = p.esAgotado || (p.estadoCatalogo && p.estadoCatalogo.toLowerCase().includes('no disponible'));
       if (agot) {
         agotadosCount++;
@@ -1332,6 +1331,23 @@ document.addEventListener('DOMContentLoaded', () => {
       <span class="catalog-stat-sep">•</span>
       <span class="catalog-stat-item stat-agot">🔴 <strong>${agotadosCount}</strong> AGOTADOS</span>
     `;
+  }
+
+  function renderizarCatalogo(productosParaMostrar, terminoBusqueda = '') {
+    if (!catalogoElements.lista) return;
+
+    catalogoElements.lista.innerHTML = '';
+    const total = productosParaMostrar.length;
+
+    // 1. Contador superior (Inventario Real): Siempre fijo con TODOS los productos de Google Sheets
+    actualizarContadorInventarioGeneral();
+
+    // 2. Nuevo contador de resultados dinámico (Búsqueda y Filtros)
+    if (catalogoElements.contadorResultados) {
+      catalogoElements.contadorResultados.textContent = (total === 1)
+        ? '1 perfume encontrado'
+        : `${total} perfumes encontrados`;
+    }
 
     if (total === 0) {
       catalogoElements.empty.style.display = 'flex';
