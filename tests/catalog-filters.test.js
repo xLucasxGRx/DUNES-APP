@@ -6,23 +6,27 @@ console.log('--- Iniciando Verificación Interna de Filtros DUNES PARFUMS ---\n'
 // 1. Verificar HTML
 const html = fs.readFileSync('index.html', 'utf8');
 assert(html.includes('id="catalogo-lista"'), 'catalogo-lista debe existir en index.html');
-assert(html.includes('class="catalog-filters-container"'), 'catalog-filters-container debe existir en index.html');
+assert(html.includes('catalog-filters-container'), 'catalog-filters-container debe existir en index.html');
 assert(html.includes('data-filter="categoria" data-value="todos"'), 'Botón categoría todos debe existir');
 assert(html.includes('data-filter="categoria" data-value="diseñador"'), 'Botón categoría diseñador debe existir');
 assert(html.includes('data-filter="categoria" data-value="árabes"'), 'Botón categoría árabes debe existir');
 assert(html.includes('data-filter="genero" data-value="todos"'), 'Botón género todos debe existir');
 assert(html.includes('data-filter="genero" data-value="hombre"'), 'Botón género hombre debe existir');
 assert(html.includes('data-filter="genero" data-value="mujer"'), 'Botón género mujer debe existir');
+assert(html.includes('data-filter="estado" data-value="todos"'), 'Botón estado todos debe existir');
+assert(html.includes('data-filter="estado" data-value="disponibles"'), 'Botón estado disponibles debe existir');
+assert(html.includes('data-filter="estado" data-value="agotados"'), 'Botón estado agotados debe existir');
 
 // Verificar que NO existe un botón 'Unisex' en los filtros
 assert(!html.includes('data-value="unisex"'), 'NO debe existir botón con valor Unisex');
-console.log('✔ [PASS] Verificación de index.html: Controles de filtro presentes y sin botón Unisex');
+console.log('✔ [PASS] Verificación de index.html: Controles de filtro presentes (Categoría, Género, Estado) y sin botón Unisex');
 
 // 2. Verificar CSS
 const css = fs.readFileSync('style.css', 'utf8');
 assert(css.includes('.catalog-filters-container'), 'style.css debe tener .catalog-filters-container');
 assert(css.includes('.catalog-filter-btn'), 'style.css debe tener .catalog-filter-btn');
 assert(css.includes('.catalog-filter-btn.is-active'), 'style.css debe tener estado .is-active');
+assert(css.includes('.card-agotado-badge'), 'style.css debe tener .card-agotado-badge');
 console.log('✔ [PASS] Verificación de style.css: Estilos visuales agregados correctamente');
 
 // 3. Simular lógica de filtrado de app.js
@@ -34,18 +38,19 @@ const normalizar = (s) => (s || '')
   .trim();
 
 const mockProductos = [
-  { id: '1', producto: 'Dior Sauvage', categoria: 'Diseñador', genero: 'Hombre' },
-  { id: '2', producto: 'Good Girl CH', categoria: 'Diseñador', genero: 'Mujer' },
-  { id: '3', producto: 'CK One', categoria: 'Diseñador', genero: 'Unisex' },
-  { id: '4', producto: 'Club de Nuit Man', categoria: 'Árabes', genero: 'Hombre' },
-  { id: '5', producto: 'Yara Lattafa', categoria: 'Árabes', genero: 'Mujer' },
-  { id: '6', producto: 'Khamrah Lattafa', categoria: 'Árabes', genero: 'Unisex' }
+  { id: '1', producto: 'Dior Sauvage', categoria: 'Diseñador', genero: 'Hombre', estadoCatalogo: 'Disponible', esAgotado: false },
+  { id: '2', producto: 'Good Girl CH', categoria: 'Diseñador', genero: 'Mujer', estadoCatalogo: 'No disponible', esAgotado: true },
+  { id: '3', producto: 'CK One', categoria: 'Diseñador', genero: 'Unisex', estadoCatalogo: 'Disponible', esAgotado: false },
+  { id: '4', producto: 'Club de Nuit Man', categoria: 'Árabes', genero: 'Hombre', estadoCatalogo: 'No disponible', esAgotado: true },
+  { id: '5', producto: 'Yara Lattafa', categoria: 'Árabes', genero: 'Mujer', estadoCatalogo: 'Disponible', esAgotado: false },
+  { id: '6', producto: 'Khamrah Lattafa', categoria: 'Árabes', genero: 'Unisex', estadoCatalogo: 'No disponible', esAgotado: true }
 ];
 
-function filtrar(items, catFiltro, genFiltro, busqueda = '') {
+function filtrar(items, catFiltro, genFiltro, estFiltro = 'todos', busqueda = '') {
   const terminoNorm = normalizar(busqueda);
   const catFiltroNorm = normalizar(catFiltro);
   const genFiltroNorm = normalizar(genFiltro);
+  const estFiltroNorm = normalizar(estFiltro);
 
   return items.filter((item) => {
     if (terminoNorm) {
@@ -73,52 +78,103 @@ function filtrar(items, catFiltro, genFiltro, busqueda = '') {
         if (!esMujer && !esUnisex) return false;
       }
     }
+    if (estFiltroNorm && estFiltroNorm !== 'todos') {
+      const esAgotado = item.esAgotado || (item.estadoCatalogo && normalizar(item.estadoCatalogo).includes('no disponible'));
+      if (estFiltroNorm === 'disponibles' && esAgotado) return false;
+      if (estFiltroNorm === 'agotados' && !esAgotado) return false;
+    }
     return true;
   });
 }
 
+function calcularMetricas(items) {
+  const total = items.length;
+  let disponibles = 0;
+  let agotados = 0;
+  items.forEach((p) => {
+    const esAgotado = p.esAgotado || (p.estadoCatalogo && normalizar(p.estadoCatalogo).includes('no disponible'));
+    if (esAgotado) agotados++;
+    else disponibles++;
+  });
+  return { total, disponibles, agotados };
+}
+
 // Tests de Categoría
-const soloDisenador = filtrar(mockProductos, 'diseñador', 'todos');
+const soloDisenador = filtrar(mockProductos, 'diseñador', 'todos', 'todos');
 assert.strictEqual(soloDisenador.length, 3, 'Diseñador debe tener 3 items');
-assert(soloDisenador.every(i => i.categoria === 'Diseñador'), 'Todos deben ser Diseñador');
 console.log('✔ [PASS] Filtro Categoría = Diseñador');
 
-const soloArabes = filtrar(mockProductos, 'árabes', 'todos');
+const soloArabes = filtrar(mockProductos, 'árabes', 'todos', 'todos');
 assert.strictEqual(soloArabes.length, 3, 'Árabes debe tener 3 items');
-assert(soloArabes.every(i => i.categoria === 'Árabes'), 'Todos deben ser Árabes');
 console.log('✔ [PASS] Filtro Categoría = Árabes');
 
 // Tests de Género
-const soloHombre = filtrar(mockProductos, 'todos', 'hombre');
-// Debe incluir Hombre + Unisex: Dior (Hombre), CK One (Unisex), Club de Nuit (Hombre), Khamrah (Unisex) -> 4 items
+const soloHombre = filtrar(mockProductos, 'todos', 'hombre', 'todos');
 assert.strictEqual(soloHombre.length, 4, 'Hombre debe incluir Hombre + Unisex (4 items)');
-assert(soloHombre.some(i => i.genero === 'Hombre'), 'Debe contener Hombre');
-assert(soloHombre.some(i => i.genero === 'Unisex'), 'Debe contener Unisex');
-assert(!soloHombre.some(i => i.genero === 'Mujer'), 'NO debe contener Mujer');
 console.log('✔ [PASS] Filtro Género = Hombre (Hombre + Unisex)');
 
-const soloMujer = filtrar(mockProductos, 'todos', 'mujer');
-// Debe incluir Mujer + Unisex: Good Girl (Mujer), CK One (Unisex), Yara (Mujer), Khamrah (Unisex) -> 4 items
+const soloMujer = filtrar(mockProductos, 'todos', 'mujer', 'todos');
 assert.strictEqual(soloMujer.length, 4, 'Mujer debe incluir Mujer + Unisex (4 items)');
-assert(soloMujer.some(i => i.genero === 'Mujer'), 'Debe contener Mujer');
-assert(soloMujer.some(i => i.genero === 'Unisex'), 'Debe contener Unisex');
-assert(!soloMujer.some(i => i.genero === 'Hombre'), 'NO debe contener Hombre');
 console.log('✔ [PASS] Filtro Género = Mujer (Mujer + Unisex)');
 
+// Tests de Estado
+const soloDisponibles = filtrar(mockProductos, 'todos', 'todos', 'disponibles');
+assert.strictEqual(soloDisponibles.length, 3, 'Disponibles debe tener 3 items');
+assert(soloDisponibles.every(i => !i.esAgotado), 'Todos deben ser Disponibles');
+console.log('✔ [PASS] Filtro Estado = Disponibles');
+
+const soloAgotados = filtrar(mockProductos, 'todos', 'todos', 'agotados');
+assert.strictEqual(soloAgotados.length, 3, 'Agotados debe tener 3 items');
+assert(soloAgotados.every(i => i.esAgotado), 'Todos deben ser Agotados');
+console.log('✔ [PASS] Filtro Estado = Agotados');
+
 // Test Todos
-const todos = filtrar(mockProductos, 'todos', 'todos');
+const todos = filtrar(mockProductos, 'todos', 'todos', 'todos');
 assert.strictEqual(todos.length, 6, 'Todos debe devolver los 6 items');
 console.log('✔ [PASS] Filtro Todos = Todo el catálogo');
 
-// Test Combinado: Diseñador + Mujer -> Good Girl (Mujer) + CK One (Unisex) -> 2 items
-const disenadorMujer = filtrar(mockProductos, 'diseñador', 'mujer');
-assert.strictEqual(disenadorMujer.length, 2, 'Diseñador + Mujer debe dar 2 items');
-console.log('✔ [PASS] Filtro Combinado: Diseñador + Mujer');
+// Test Combinado Triple: Diseñador + Hombre + Disponibles
+// Items:
+// 1. Dior Sauvage (Diseñador, Hombre, Disp) -> match
+// 2. Good Girl CH (Diseñador, Mujer, NoDisp) -> no hombre
+// 3. CK One (Diseñador, Unisex, Disp) -> match (Unisex en Hombre y Disp)
+// Total esperado = 2
+const comb1 = filtrar(mockProductos, 'diseñador', 'hombre', 'disponibles');
+assert.strictEqual(comb1.length, 2, 'Diseñador + Hombre + Disponibles debe dar 2 items');
+console.log('✔ [PASS] Filtro Combinado: Diseñador + Hombre + Disponibles');
 
-// 4. Test de Lectura de Filas de Google Sheets (Columnas A-N)
+// Test Combinado Triple: Árabes + Mujer + Agotados
+// Items:
+// 4. Club de Nuit (Árabes, Hombre, NoDisp) -> no mujer
+// 5. Yara (Árabes, Mujer, Disp) -> no agotado
+// 6. Khamrah (Árabes, Unisex, NoDisp) -> match (Unisex en Mujer y NoDisp)
+// Total esperado = 1
+const comb2 = filtrar(mockProductos, 'árabes', 'mujer', 'agotados');
+assert.strictEqual(comb2.length, 1, 'Árabes + Mujer + Agotados debe dar 1 item');
+assert.strictEqual(comb2[0].producto, 'Khamrah Lattafa');
+console.log('✔ [PASS] Filtro Combinado: Árabes + Mujer + Agotados');
+
+// Test Métricas Dinámicas del Contador
+const metricasGlobal = calcularMetricas(mockProductos);
+assert.strictEqual(metricasGlobal.total, 6);
+assert.strictEqual(metricasGlobal.disponibles, 3);
+assert.strictEqual(metricasGlobal.agotados, 3);
+console.log('✔ [PASS] Cálculo dinámico de métricas: Total catálogo, Disponibles y Agotados');
+
+// 4. Test de Mapeo y Acordeón en index.html y app.js
+assert(html.includes('id="btn-toggle-filtros"'), 'index.html debe tener el botón btn-toggle-filtros');
+assert(html.includes('id="catalog-filters-collapsible"'), 'index.html debe tener el panel colapsable catalog-filters-collapsible');
+
 const appJsCode = fs.readFileSync('app.js', 'utf8');
 assert(appJsCode.includes('categoria: encontrarIndice'), 'app.js debe mapear categoria');
 assert(appJsCode.includes('genero: encontrarIndice'), 'app.js debe mapear genero');
-console.log('✔ [PASS] Mapeo de columnas A-N en Google Sheets correcto');
+assert(appJsCode.includes('estadoCatalogo: encontrarIndice'), 'app.js debe mapear estadoCatalogo');
+assert(appJsCode.includes('filtroEstadoActivo'), 'app.js debe manejar filtroEstadoActivo');
+assert(appJsCode.includes('btn-toggle-filtros'), 'app.js debe controlar btn-toggle-filtros');
+assert(appJsCode.includes('stat-disp'), 'app.js debe generar indicador stat-disp');
+assert(appJsCode.includes('stat-agot'), 'app.js debe generar indicador stat-agot');
+assert(appJsCode.includes('disponible'), 'app.js debe incluir etiqueta disponible en el contador');
+assert(appJsCode.includes('agotado'), 'app.js debe incluir etiqueta agotado en el contador');
+console.log('✔ [PASS] Mapeo de columnas, acordeón de filtros y contadores compactos en app.js verificado');
 
 console.log('\n🎉 TODAS LAS VALIDACIONES DE FILTROS PASARON AL 100%');

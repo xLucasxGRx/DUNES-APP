@@ -144,6 +144,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let catalogoImageObserver = null;
   let filtroCategoriaActivo = 'todos';
   let filtroGeneroActivo = 'todos';
+  let filtroEstadoActivo = 'todos';
   let vistaActiva = 'cotizador';
 
   // Formateadores
@@ -1235,15 +1236,19 @@ document.addEventListener('DOMContentLoaded', () => {
       let esAgotado = false;
       let estadoCatalogo = 'Disponible';
       if (idxMap.estadoCatalogo !== -1) {
-        const estadoVal = (row[idxMap.estadoCatalogo] || '')
-          .toString()
-          .trim()
+        const rawEstado = (row[idxMap.estadoCatalogo] || '').toString().trim();
+        const estadoVal = rawEstado
           .toLowerCase()
           .normalize('NFD')
           .replace(/[\u0300-\u036f]/g, '');
         if (estadoVal.includes('no disponible')) {
           esAgotado = true;
           estadoCatalogo = 'No disponible';
+        } else if (estadoVal.includes('disponible')) {
+          esAgotado = false;
+          estadoCatalogo = 'Disponible';
+        } else if (rawEstado) {
+          estadoCatalogo = rawEstado;
         }
       }
 
@@ -1309,20 +1314,35 @@ document.addEventListener('DOMContentLoaded', () => {
     catalogoElements.lista.innerHTML = '';
     const total = productosParaMostrar.length;
 
-    if (terminoBusqueda) {
-      catalogoElements.contador.textContent = `${total} resultado${total === 1 ? '' : 's'} para "${terminoBusqueda}"`;
-    } else {
-      catalogoElements.contador.textContent = `${total} perfume${total === 1 ? '' : 's'} disponible${total === 1 ? '' : 's'}`;
+    // Cálculo dinámico de métricas del catálogo: Total, Disponibles y Agotados
+    let disponiblesCount = 0;
+    let agotadosCount = 0;
+    for (let i = 0; i < productosParaMostrar.length; i++) {
+      const p = productosParaMostrar[i];
+      const agot = p.esAgotado || (p.estadoCatalogo && p.estadoCatalogo.toLowerCase().includes('no disponible'));
+      if (agot) {
+        agotadosCount++;
+      } else {
+        disponiblesCount++;
+      }
     }
+
+    catalogoElements.contador.innerHTML = `
+      <span class="catalog-stat-item"><strong>${total}</strong> perfume${total === 1 ? '' : 's'}</span>
+      <span class="catalog-stat-sep">•</span>
+      <span class="catalog-stat-item stat-disp">🟢<strong>${disponiblesCount}</strong> disponible${disponiblesCount === 1 ? '' : 's'}</span>
+      <span class="catalog-stat-sep">•</span>
+      <span class="catalog-stat-item stat-agot">🔴<strong>${agotadosCount}</strong> agotado${agotadosCount === 1 ? '' : 's'}</span>
+    `;
 
     if (total === 0) {
       catalogoElements.empty.style.display = 'flex';
       if (terminoBusqueda) {
         catalogoElements.emptyTitle.textContent = `No se encontraron perfumes para "${terminoBusqueda}"`;
-        catalogoElements.emptyDesc.textContent = 'Intenta buscando por otra marca o nombre, o ajusta los filtros de categoría/género.';
-      } else if (filtroCategoriaActivo !== 'todos' || filtroGeneroActivo !== 'todos') {
+        catalogoElements.emptyDesc.textContent = 'Intenta buscando por otra marca o nombre, o ajusta los filtros de categoría/género/estado.';
+      } else if (filtroCategoriaActivo !== 'todos' || filtroGeneroActivo !== 'todos' || filtroEstadoActivo !== 'todos') {
         catalogoElements.emptyTitle.textContent = 'No hay perfumes con los filtros seleccionados';
-        catalogoElements.emptyDesc.textContent = 'Prueba seleccionando "Todos" en categoría o género.';
+        catalogoElements.emptyDesc.textContent = 'Prueba seleccionando "Todos" en categoría, género o estado.';
       } else {
         catalogoElements.emptyTitle.textContent = 'Catálogo vacío';
         catalogoElements.emptyDesc.textContent = 'No hay filas en la hoja de Google Sheets.';
@@ -1481,6 +1501,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const terminoNorm = normalizar(termino);
     const catFiltroNorm = normalizar(filtroCategoriaActivo);
     const genFiltroNorm = normalizar(filtroGeneroActivo);
+    const estFiltroNorm = normalizar(filtroEstadoActivo);
 
     const filtrados = catalogoProductos.filter((item) => {
       // 1. Filtro por término de búsqueda en el nombre del producto
@@ -1517,6 +1538,17 @@ document.addEventListener('DOMContentLoaded', () => {
           const esMujer = itemGenNorm.includes('mujer') || itemGenNorm.includes('wom') || itemGenNorm.includes('femenin');
           if (!esMujer && !esUnisex) return false;
         }
+      }
+
+      // 4. Filtro de Estado (Opciones: Todos | Disponibles | Agotados)
+      // Reglas:
+      // - Todos muestra todos los productos.
+      // - Disponibles muestra únicamente Estado catálogo = Disponible.
+      // - Agotados muestra únicamente Estado catálogo = No disponible.
+      if (estFiltroNorm && estFiltroNorm !== 'todos') {
+        const esAgotado = item.esAgotado || (item.estadoCatalogo && normalizar(item.estadoCatalogo).includes('no disponible'));
+        if (estFiltroNorm === 'disponibles' && esAgotado) return false;
+        if (estFiltroNorm === 'agotados' && !esAgotado) return false;
       }
 
       return true;
@@ -1653,12 +1685,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Filtros de Categoría y Género del Catálogo
+  // Filtros de Categoría, Género y Estado del Catálogo
   const filterBtns = document.querySelectorAll('.catalog-filter-btn');
   filterBtns.forEach((btn) => {
     btn.addEventListener('click', () => {
-      const tipo = btn.getAttribute('data-filter'); // 'categoria' | 'genero'
-      const valor = btn.getAttribute('data-value'); // 'todos' | 'diseñador' | 'árabes' | 'hombre' | 'mujer'
+      const tipo = btn.getAttribute('data-filter'); // 'categoria' | 'genero' | 'estado'
+      const valor = btn.getAttribute('data-value'); // 'todos' | 'diseñador' | 'árabes' | 'hombre' | 'mujer' | 'disponibles' | 'agotados'
 
       if (tipo === 'categoria') {
         filtroCategoriaActivo = valor;
@@ -1670,11 +1702,50 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.catalog-filter-btn[data-filter="genero"]').forEach((b) => {
           b.classList.toggle('is-active', b === btn);
         });
+      } else if (tipo === 'estado') {
+        filtroEstadoActivo = valor;
+        document.querySelectorAll('.catalog-filter-btn[data-filter="estado"]').forEach((b) => {
+          b.classList.toggle('is-active', b === btn);
+        });
       }
 
       filtrarCatalogo();
+      actualizarIndicadorFiltrosActivos();
     });
   });
+
+  // Control de acordeón desplegable de filtros del catálogo
+  const btnToggleFiltros = document.getElementById('btn-toggle-filtros');
+  const panelFiltros = document.getElementById('catalog-filters-collapsible');
+  const toggleFiltrosArrow = document.getElementById('toggle-filtros-arrow');
+  const toggleFiltrosDot = document.getElementById('toggle-filtros-dot');
+
+  function actualizarIndicadorFiltrosActivos() {
+    const hayFiltrosActivos = (filtroCategoriaActivo !== 'todos') || (filtroGeneroActivo !== 'todos') || (filtroEstadoActivo !== 'todos');
+    if (toggleFiltrosDot) {
+      toggleFiltrosDot.style.display = hayFiltrosActivos ? 'inline-block' : 'none';
+    }
+    if (btnToggleFiltros) {
+      btnToggleFiltros.classList.toggle('has-active-filters', hayFiltrosActivos);
+    }
+  }
+
+  if (btnToggleFiltros && panelFiltros) {
+    btnToggleFiltros.addEventListener('click', () => {
+      const estaColapsado = panelFiltros.classList.contains('is-collapsed');
+      if (estaColapsado) {
+        panelFiltros.classList.remove('is-collapsed');
+        btnToggleFiltros.classList.add('is-open');
+        btnToggleFiltros.setAttribute('aria-expanded', 'true');
+        if (toggleFiltrosArrow) toggleFiltrosArrow.textContent = '▲';
+      } else {
+        panelFiltros.classList.add('is-collapsed');
+        btnToggleFiltros.classList.remove('is-open');
+        btnToggleFiltros.setAttribute('aria-expanded', 'false');
+        if (toggleFiltrosArrow) toggleFiltrosArrow.textContent = '▼';
+      }
+    });
+  }
 
   // Cálculo y sincronización en tiempo real
   Object.entries(inputs).forEach(([key, input]) => {

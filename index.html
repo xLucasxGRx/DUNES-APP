@@ -322,16 +322,9 @@
       <!-- VISTA 2: CATÁLOGO (SOLO CONSULTA CONECTADO A GOOGLE SHEETS) -->
       <div id="vista-catalogo" class="app-view is-hidden">
         <section class="section-card catalog-section" id="seccion-catalogo">
-          <!-- Encabezado del Catálogo -->
+          <!-- Encabezado del Catálogo Compacto -->
           <div class="catalog-header-bar">
-            <div class="catalog-title-group">
-              <div class="catalog-badge-consultation">
-                <span class="badge-dot-gold"></span>
-                <span>Solo Consulta</span>
-              </div>
-              <h2 class="catalog-main-title">CATÁLOGO DE PERFUMES</h2>
-              <p class="catalog-subtitle">Conectado con Google Sheets &bull; Información en tiempo real</p>
-            </div>
+            <h2 class="catalog-main-title">CATÁLOGO DE PERFUMES</h2>
 
             <!-- Sincronización y Estado Google Sheets -->
             <div class="catalog-sync-wrapper">
@@ -346,7 +339,7 @@
             </div>
           </div>
 
-          <!-- Buscador Rápido Reactivo -->
+          <!-- Buscador Rápido Reactivo y Barra de Control -->
           <div class="catalog-search-container">
             <div class="catalog-search-bar">
               <span class="catalog-search-icon">🔍</span>
@@ -355,12 +348,17 @@
             </div>
             <div class="catalog-meta-row">
               <span class="catalog-counter" id="catalogo-contador">Consultando Google Sheets...</span>
-              <span class="catalog-read-only-hint">🔒 Edición centralizada en Google Sheets</span>
+              <button type="button" id="btn-toggle-filtros" class="btn-toggle-filters" aria-expanded="false" aria-controls="catalog-filters-collapsible" title="Mostrar u ocultar filtros">
+                <span class="toggle-icon">⚙</span>
+                <span class="toggle-text">Filtros</span>
+                <span class="toggle-arrow" id="toggle-filtros-arrow">▼</span>
+                <span class="toggle-active-dot" id="toggle-filtros-dot" style="display: none;" title="Filtros aplicados"></span>
+              </button>
             </div>
           </div>
 
-          <!-- Filtros de Categoría y Género -->
-          <div class="catalog-filters-container">
+          <!-- Filtros de Categoría, Género y Estado (Desplegable) -->
+          <div class="catalog-filters-container is-collapsed" id="catalog-filters-collapsible">
             <!-- Filtro de Categoría -->
             <div class="filter-row">
               <span class="filter-row-label">Categoría</span>
@@ -378,6 +376,16 @@
                 <button type="button" class="catalog-filter-btn is-active" data-filter="genero" data-value="todos">Todos</button>
                 <button type="button" class="catalog-filter-btn" data-filter="genero" data-value="hombre">Hombre</button>
                 <button type="button" class="catalog-filter-btn" data-filter="genero" data-value="mujer">Mujer</button>
+              </div>
+            </div>
+
+            <!-- Filtro de Estado -->
+            <div class="filter-row">
+              <span class="filter-row-label">Estado</span>
+              <div class="filter-pills-group" id="filter-group-estado" role="group" aria-label="Filtro de estado">
+                <button type="button" class="catalog-filter-btn is-active" data-filter="estado" data-value="todos">Todos</button>
+                <button type="button" class="catalog-filter-btn" data-filter="estado" data-value="disponibles">Disponibles</button>
+                <button type="button" class="catalog-filter-btn" data-filter="estado" data-value="agotados">Agotados</button>
               </div>
             </div>
           </div>
