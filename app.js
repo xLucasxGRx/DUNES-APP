@@ -1152,6 +1152,7 @@ document.addEventListener('DOMContentLoaded', () => {
    * Columna L: Costos extras
    * Columna M: Ganancia (S/.)
    * Columna N: Imagen
+   * Columna O: Estado catálogo
    */
   function convertirFilasACatalogo(rows) {
     if (!rows || rows.length < 2) return [];
@@ -1160,7 +1161,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const encontrarIndice = (posibles) => headers.findIndex(h => posibles.includes(h));
 
     const idxMap = {
-      // Mapeo exacto de los nombres de columnas oficiales (A-N):
+      // Mapeo exacto de los nombres de columnas oficiales (A-O):
       producto: encontrarIndice(['producto', 'perfume', 'nombre']),
       precioUSA: encontrarIndice(['preciousa', 'precio_usa', 'preciounitariousa']),
       cantidad: encontrarIndice(['cantidad', 'cant', 'unidades']),
@@ -1174,13 +1175,15 @@ document.addEventListener('DOMContentLoaded', () => {
       precioVenta: encontrarIndice(['precioventas', 'precioventa', 'precio_venta']),
       costosExtras: encontrarIndice(['costosextras', 'costosextraslocales', 'extras']),
       ganancia: encontrarIndice(['ganancias', 'ganancia', 'ganancia_neta']),
-      imagen: encontrarIndice(['imagen', 'img', 'foto', 'image', 'urlimagen', 'imagenurl', 'fotourl'])
+      imagen: encontrarIndice(['imagen', 'img', 'foto', 'image', 'urlimagen', 'imagenurl', 'fotourl']),
+      estadoCatalogo: encontrarIndice(['estadocatalogo', 'estado_catalogo', 'estado', 'status', 'disponibilidad'])
     };
 
-    // Respaldo estricto por posición de columnas A-N (0 a 13):
+    // Respaldo estricto por posición de columnas A-N (0 a 13) o A-O (0 a 14):
     // A: Producto (0), B: Precio USA ($) (1), C: Cantidad (2), D: Categoría (3), E: Género (4),
     // F: Peso KG (5), G: Flete x KG (6), H: Reempaque (7), I: Precio Dólar (T.C) (8),
-    // J: Costo Perú (9), K: Precio Venta (S/.) (10), L: Costos extras (11), M: Ganancia (S/.) (12), N: Imagen (13)
+    // J: Costo Perú (9), K: Precio Venta (S/.) (10), L: Costos extras (11), M: Ganancia (S/.) (12), N: Imagen (13),
+    // O: Estado catálogo (14)
     const tieneEstructuraConCatGen = idxMap.categoria !== -1 || idxMap.genero !== -1 || headers.length >= 13;
 
     if (tieneEstructuraConCatGen) {
@@ -1198,6 +1201,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (idxMap.costosExtras === -1 && headers.length > 11) idxMap.costosExtras = 11;
       if (idxMap.ganancia === -1 && headers.length > 12) idxMap.ganancia = 12;
       if (idxMap.imagen === -1 && headers.length > 13) idxMap.imagen = 13;
+      if (idxMap.estadoCatalogo === -1 && headers.length > 14) idxMap.estadoCatalogo = 14;
     } else {
       // Respaldo retrocompatible para formatos anteriores A-K (0 a 10)
       if (idxMap.producto === -1 && headers.length > 0) idxMap.producto = 0;
@@ -1227,6 +1231,22 @@ document.addEventListener('DOMContentLoaded', () => {
       const nombre = idxMap.producto !== -1 ? (row[idxMap.producto] || '').trim() : '';
       if (!nombre) continue;
 
+      // Detección de Estado catálogo: Disponible vs No disponible (Agotado)
+      let esAgotado = false;
+      let estadoCatalogo = 'Disponible';
+      if (idxMap.estadoCatalogo !== -1) {
+        const estadoVal = (row[idxMap.estadoCatalogo] || '')
+          .toString()
+          .trim()
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '');
+        if (estadoVal.includes('no disponible')) {
+          esAgotado = true;
+          estadoCatalogo = 'No disponible';
+        }
+      }
+
       productos.push({
         id: `gs-${i}`,
         // Campos visibles en el catálogo:
@@ -1236,9 +1256,11 @@ document.addEventListener('DOMContentLoaded', () => {
         precioVenta: idxMap.precioVenta !== -1 ? limpiarNumero(row[idxMap.precioVenta], 0) : 0,
         ganancia: idxMap.ganancia !== -1 ? limpiarNumero(row[idxMap.ganancia], 0) : 0,
 
-        // Campos de filtrado:
+        // Campos de filtrado y estado:
         categoria: (idxMap.categoria !== -1 && row[idxMap.categoria]) ? (row[idxMap.categoria] || '').toString().trim() : '',
         genero: (idxMap.genero !== -1 && row[idxMap.genero]) ? (row[idxMap.genero] || '').toString().trim() : '',
+        estadoCatalogo: estadoCatalogo,
+        esAgotado: esAgotado,
 
         // Datos internos mantenidos:
         cantidad: idxMap.cantidad !== -1 ? Math.max(1, parseInt(row[idxMap.cantidad], 10) || 1) : 1,
@@ -1311,8 +1333,9 @@ document.addEventListener('DOMContentLoaded', () => {
     catalogoElements.empty.style.display = 'none';
 
     productosParaMostrar.forEach((item) => {
+      const esAgotado = item.esAgotado || (item.estadoCatalogo && item.estadoCatalogo.toLowerCase().includes('no disponible'));
       const card = document.createElement('article');
-      card.className = 'catalog-card';
+      card.className = esAgotado ? 'catalog-card is-agotado' : 'catalog-card';
       card.setAttribute('data-id', item.id);
 
       const gananciaPositiva = (item.ganancia >= 0);
@@ -1333,7 +1356,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ` : `
               <span class="card-perfume-icon">🧴</span>
             `}
-            <h3 class="card-product-name" title="${escapeHTML(item.producto)}">${escapeHTML(item.producto)}</h3>
+            <h3 class="card-product-name" title="${escapeHTML(item.producto)}${esAgotado ? ' (AGOTADO)' : ''}">${escapeHTML(item.producto)}${esAgotado ? ' <span class="card-agotado-badge">(AGOTADO)</span>' : ''}</h3>
           </div>
           <div class="card-usa-tag">
             <span class="usa-lbl">USA</span>
