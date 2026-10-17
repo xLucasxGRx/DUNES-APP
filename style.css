@@ -2417,13 +2417,26 @@ body {
   text-shadow: 0 0 8px rgba(52, 211, 153, 0.35);
 }
 
+.trio-sub-margen {
+  font-family: var(--font-sans);
+  font-size: 0.60rem;
+  font-weight: 600;
+  color: #34d399;
+  opacity: 0.88;
+  line-height: 1.15;
+  margin-top: 0.1rem;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+}
+
 .trio-item.trio-ganancia.is-loss {
   background: rgba(239, 68, 68, 0.12);
   border-color: rgba(239, 68, 68, 0.35);
 }
 
 .trio-item.trio-ganancia.is-loss .trio-lbl,
-.trio-item.trio-ganancia.is-loss .trio-val {
+.trio-item.trio-ganancia.is-loss .trio-val,
+.trio-item.trio-ganancia.is-loss .trio-sub-margen {
   color: #f87171;
   text-shadow: none;
 }

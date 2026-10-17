@@ -1375,6 +1375,17 @@ document.addEventListener('DOMContentLoaded', () => {
       const gananciaPositiva = (item.ganancia >= 0);
       const tieneImagen = item.imagen && (item.imagen.startsWith('http://') || item.imagen.startsWith('https://'));
 
+      // Cálculo de margen sobre precio de venta: (ganancia neta / precio de venta) * 100
+      let textoMargen = 'Margen: —';
+      const tieneGananciaValida = typeof item.ganancia === 'number' && !isNaN(item.ganancia);
+      const tieneVentaValida = typeof item.precioVenta === 'number' && !isNaN(item.precioVenta) && item.precioVenta > 0;
+
+      if (tieneGananciaValida && tieneVentaValida) {
+        const margenPct = (item.ganancia / item.precioVenta) * 100;
+        const margenAjustado = Math.abs(margenPct) < 0.005 ? 0 : margenPct;
+        textoMargen = `Margen: ${margenAjustado.toFixed(2)} %`;
+      }
+
       card.innerHTML = `
         <!-- 1. Encabezado: Perfume (Icono o Mini imagen) + Nombre y Precio USA cercano -->
         <div class="card-top-section">
@@ -1411,6 +1422,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <div class="trio-item trio-ganancia ${gananciaPositiva ? 'is-profit' : 'is-loss'}">
             <span class="trio-lbl">Ganancia</span>
             <span class="trio-val val-ganancia">${formatPEN(item.ganancia)}</span>
+            <span class="trio-sub-margen">${textoMargen}</span>
           </div>
         </div>
 
