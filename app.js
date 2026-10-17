@@ -146,7 +146,14 @@ document.addEventListener('DOMContentLoaded', () => {
   let filtroCategoriaActivo = 'todos';
   let filtroGeneroActivo = 'todos';
   let filtroEstadoActivo = 'todos';
-  let vistaActiva = 'cotizador';
+  let vistaActiva = 'catalogo';
+
+  // Optimizaciones de rendimiento del Catálogo (DOM, Normalización e Imágenes)
+  const tarjetaDomCache = new Map();
+  const imagenesCargadas = new Set();
+  const imagenesFallidas = new Set();
+  let debounceBusquedaTimer = null;
+  let ultimoContadorInventarioHtml = '';
 
   // Formateadores
   const formatUSD = (num) => `$ ${Number(num || 0).toFixed(2)}`;
@@ -859,7 +866,7 @@ document.addEventListener('DOMContentLoaded', () => {
   /**
    * ========================================================================
    * GESTIÓN DE NAVEGACIÓN ENTRE MÓDULOS (COTIZADOR / CATÁLOGO / COTIZACIONES)
-   * Regla de Negocio: El Cotizador siempre es el módulo principal y la pantalla inicial.
+   * Regla de Negocio: Catálogo es la pantalla principal inicial.
    * ========================================================================
    */
   function cambiarPestana(nombreTab) {
@@ -899,8 +906,10 @@ document.addEventListener('DOMContentLoaded', () => {
       if (catalogoProductos.length === 0) {
         cargarCatalogo(false);
       } else {
-        // Reactivar lazy loading de tarjetas visibles al regresar a la pestaña
-        iniciarLazyLoadingCatalogo();
+        // Reactivar lazy loading solo si hay imágenes pendientes de carga y el observador no está activo
+        if (!catalogoImageObserver && catalogoElements.lista && catalogoElements.lista.querySelector('img.card-mini-thumb[data-src]')) {
+          iniciarLazyLoadingCatalogo();
+        }
       }
       if (catalogoElements.busqueda) {
         setTimeout(() => catalogoElements.busqueda.focus(), 150);
@@ -1309,6 +1318,160 @@ document.addEventListener('DOMContentLoaded', () => {
    * - Pie: Datos internos de cálculo en una sola línea compacta
    * - Soporte de imagen opcional
    */
+  /**
+   * Normalización eficiente de texto para búsquedas (sin tildes, minúsculas)
+   */
+  function normalizarTexto(s) {
+    return (s || '')
+      .toString()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim();
+  }
+
+  /**
+   * Pre-calcula campos normalizados de búsqueda en memoria para evitar
+   * ejecutar normalizaciones costosas repetidamente durante cada tipeo.
+   */
+  function prepararCamposBusqueda(items) {
+    if (!Array.isArray(items)) return;
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (!item._normPreparado) {
+        item._nombreNorm = normalizarTexto(item.producto);
+        item._catNorm = normalizarTexto(item.categoria);
+        item._genNorm = normalizarTexto(item.genero);
+        item._estNorm = normalizarTexto(item.estadoCatalogo);
+        item._normPreparado = true;
+      }
+    }
+  }
+
+  /**
+   * Poda elementos eliminados de la caché de nodos DOM para evitar fugas de memoria
+   */
+  function podarCacheTarjetas(productosVigentes) {
+    if (!Array.isArray(productosVigentes)) return;
+    const idsVigentes = new Set(productosVigentes.map((p) => p.id));
+    for (const id of tarjetaDomCache.keys()) {
+      if (!idsVigentes.has(id)) {
+        tarjetaDomCache.delete(id);
+      }
+    }
+  }
+
+  /**
+   * Construye o recupera del caché en memoria el nodo DOM de una tarjeta de perfume.
+   * Si la tarjeta ya existe con datos idénticos, reutiliza el nodo existente manteniendo
+   * intactas sus imágenes ya cargadas y su estado visual.
+   */
+  function obtenerElementoTarjeta(item) {
+    const itemSignature = `${item.id}|${item.producto}|${item.precioUSA}|${item.costoPeru}|${item.precioVenta}|${item.ganancia}|${item.imagen}|${item.esAgotado}|${item.estadoCatalogo}|${item.cantidad}|${item.pesoKg}|${item.fleteKg}|${item.reempaque}|${item.tc}|${item.costosExtras}`;
+
+    const cached = tarjetaDomCache.get(item.id);
+    if (cached && cached._signature === itemSignature) {
+      return cached.element;
+    }
+
+    const esAgotado = item.esAgotado || (item.estadoCatalogo && item.estadoCatalogo.toLowerCase().includes('no disponible'));
+    const card = document.createElement('article');
+    card.className = esAgotado ? 'catalog-card is-agotado' : 'catalog-card';
+    card.setAttribute('data-id', item.id);
+
+    const gananciaPositiva = (item.ganancia >= 0);
+    const tieneImagen = item.imagen && (item.imagen.startsWith('http://') || item.imagen.startsWith('https://'));
+
+    // Cálculo de margen sobre precio de venta: (ganancia neta / precio de venta) * 100
+    let textoMargen = 'Margen: —';
+    const tieneGananciaValida = typeof item.ganancia === 'number' && !isNaN(item.ganancia);
+    const tieneVentaValida = typeof item.precioVenta === 'number' && !isNaN(item.precioVenta) && item.precioVenta > 0;
+
+    if (tieneGananciaValida && tieneVentaValida) {
+      const margenPct = (item.ganancia / item.precioVenta) * 100;
+      const margenAjustado = Math.abs(margenPct) < 0.005 ? 0 : margenPct;
+      textoMargen = `Margen: ${margenAjustado.toFixed(2)} %`;
+    }
+
+    let htmlImagen = '<span class="card-perfume-icon">🧴</span>';
+    if (tieneImagen) {
+      if (imagenesCargadas.has(item.imagen)) {
+        htmlImagen = `
+          <div class="card-thumb-wrapper">
+            <div class="card-thumb-placeholder is-hidden">
+              <span class="card-thumb-shimmer"></span>
+              <span class="card-thumb-fallback-icon">🧴</span>
+            </div>
+            <img src="${escapeHTML(item.imagen)}" alt="${escapeHTML(item.producto)}" class="card-mini-thumb is-loaded" onerror="this.style.display='none'; if(this.previousElementSibling) this.previousElementSibling.classList.add('is-failed');">
+          </div>
+        `;
+      } else if (imagenesFallidas.has(item.imagen)) {
+        htmlImagen = `
+          <div class="card-thumb-wrapper">
+            <div class="card-thumb-placeholder is-failed">
+              <span class="card-thumb-shimmer"></span>
+              <span class="card-thumb-fallback-icon">🧴</span>
+            </div>
+            <img alt="${escapeHTML(item.producto)}" class="card-mini-thumb" style="display:none">
+          </div>
+        `;
+      } else {
+        htmlImagen = `
+          <div class="card-thumb-wrapper">
+            <div class="card-thumb-placeholder">
+              <span class="card-thumb-shimmer"></span>
+              <span class="card-thumb-fallback-icon">🧴</span>
+            </div>
+            <img data-src="${escapeHTML(item.imagen)}" alt="${escapeHTML(item.producto)}" class="card-mini-thumb" onerror="this.style.display='none'; if(this.previousElementSibling) this.previousElementSibling.classList.add('is-failed');">
+          </div>
+        `;
+      }
+    }
+
+    card.innerHTML = `
+      <!-- 1. Encabezado: Perfume (Icono o Mini imagen) + Nombre y Precio USA cercano -->
+      <div class="card-top-section">
+        <div class="card-title-group">
+          ${htmlImagen}
+          <h3 class="card-product-name" title="${escapeHTML(item.producto)}${esAgotado ? ' (AGOTADO)' : ''}">${escapeHTML(item.producto)}${esAgotado ? ' <span class="card-agotado-badge">(AGOTADO)</span>' : ''}</h3>
+        </div>
+        <div class="card-usa-tag">
+          <span class="usa-lbl">USA</span>
+          <span class="usa-val">${formatUSD(item.precioUSA)}</span>
+        </div>
+      </div>
+
+      <!-- 2. Bloque Principal: Sección visual con 3 valores grandes -->
+      <div class="card-trio-grid">
+        <div class="trio-item trio-costo">
+          <span class="trio-lbl">Costo Perú</span>
+          <span class="trio-val val-costo">${formatPEN(item.costoPeru)}</span>
+        </div>
+        <div class="trio-item trio-venta">
+          <span class="trio-lbl">Venta</span>
+          <span class="trio-val val-venta">${formatPEN(item.precioVenta)}</span>
+        </div>
+        <div class="trio-item trio-ganancia ${gananciaPositiva ? 'is-profit' : 'is-loss'}">
+          <span class="trio-lbl">Ganancia</span>
+          <span class="trio-val val-ganancia">${formatPEN(item.ganancia)}</span>
+          <span class="trio-sub-margen">${textoMargen}</span>
+        </div>
+      </div>
+
+      <!-- 3. Datos Internos: Una sola línea inferior compacta y discreta -->
+      <div class="card-internal-footer">
+        <span class="calc-line-text">${item.cantidad}ud • ${Number(item.pesoKg || 0).toFixed(2)}kg • Flete ${formatUSD(item.fleteKg)} • Rep ${formatUSD(item.reempaque)} • TC ${Number(item.tc || 0).toFixed(2)} • Extras ${formatPEN(item.costosExtras)}</span>
+      </div>
+    `;
+
+    tarjetaDomCache.set(item.id, {
+      element: card,
+      _signature: itemSignature
+    });
+
+    return card;
+  }
+
   function actualizarContadorInventarioGeneral() {
     if (!catalogoElements.contador) return;
 
@@ -1326,17 +1489,22 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    catalogoElements.contador.innerHTML = `
+    const nuevoHtml = `
       <span class="catalog-stat-item stat-disp">🟢 <strong>${disponiblesCount}</strong> DISPONIBLES</span>
       <span class="catalog-stat-sep">•</span>
       <span class="catalog-stat-item stat-agot">🔴 <strong>${agotadosCount}</strong> AGOTADOS</span>
     `;
+
+    // Evitar mutar el DOM si las cifras de inventario no han cambiado
+    if (nuevoHtml !== ultimoContadorInventarioHtml) {
+      catalogoElements.contador.innerHTML = nuevoHtml;
+      ultimoContadorInventarioHtml = nuevoHtml;
+    }
   }
 
   function renderizarCatalogo(productosParaMostrar, terminoBusqueda = '') {
     if (!catalogoElements.lista) return;
 
-    catalogoElements.lista.innerHTML = '';
     const total = productosParaMostrar.length;
 
     // 1. Contador superior (Inventario Real): Siempre fijo con TODOS los productos de Google Sheets
@@ -1350,6 +1518,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (total === 0) {
+      catalogoElements.lista.replaceChildren();
       catalogoElements.empty.style.display = 'flex';
       if (terminoBusqueda) {
         catalogoElements.emptyTitle.textContent = `No se encontraron perfumes para "${terminoBusqueda}"`;
@@ -1366,76 +1535,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     catalogoElements.empty.style.display = 'none';
 
-    productosParaMostrar.forEach((item) => {
-      const esAgotado = item.esAgotado || (item.estadoCatalogo && item.estadoCatalogo.toLowerCase().includes('no disponible'));
-      const card = document.createElement('article');
-      card.className = esAgotado ? 'catalog-card is-agotado' : 'catalog-card';
-      card.setAttribute('data-id', item.id);
+    // Reutilizar nodos DOM mediante DocumentFragment y replaceChildren para no destruir tarjetas existentes
+    const fragment = document.createDocumentFragment();
+    for (let i = 0; i < total; i++) {
+      fragment.appendChild(obtenerElementoTarjeta(productosParaMostrar[i]));
+    }
+    catalogoElements.lista.replaceChildren(fragment);
 
-      const gananciaPositiva = (item.ganancia >= 0);
-      const tieneImagen = item.imagen && (item.imagen.startsWith('http://') || item.imagen.startsWith('https://'));
-
-      // Cálculo de margen sobre precio de venta: (ganancia neta / precio de venta) * 100
-      let textoMargen = 'Margen: —';
-      const tieneGananciaValida = typeof item.ganancia === 'number' && !isNaN(item.ganancia);
-      const tieneVentaValida = typeof item.precioVenta === 'number' && !isNaN(item.precioVenta) && item.precioVenta > 0;
-
-      if (tieneGananciaValida && tieneVentaValida) {
-        const margenPct = (item.ganancia / item.precioVenta) * 100;
-        const margenAjustado = Math.abs(margenPct) < 0.005 ? 0 : margenPct;
-        textoMargen = `Margen: ${margenAjustado.toFixed(2)} %`;
-      }
-
-      card.innerHTML = `
-        <!-- 1. Encabezado: Perfume (Icono o Mini imagen) + Nombre y Precio USA cercano -->
-        <div class="card-top-section">
-          <div class="card-title-group">
-            ${tieneImagen ? `
-              <div class="card-thumb-wrapper">
-                <div class="card-thumb-placeholder">
-                  <span class="card-thumb-shimmer"></span>
-                  <span class="card-thumb-fallback-icon">🧴</span>
-                </div>
-                <img data-src="${escapeHTML(item.imagen)}" alt="${escapeHTML(item.producto)}" class="card-mini-thumb" onerror="this.style.display='none'; if(this.previousElementSibling) this.previousElementSibling.classList.add('is-failed');">
-              </div>
-            ` : `
-              <span class="card-perfume-icon">🧴</span>
-            `}
-            <h3 class="card-product-name" title="${escapeHTML(item.producto)}${esAgotado ? ' (AGOTADO)' : ''}">${escapeHTML(item.producto)}${esAgotado ? ' <span class="card-agotado-badge">(AGOTADO)</span>' : ''}</h3>
-          </div>
-          <div class="card-usa-tag">
-            <span class="usa-lbl">USA</span>
-            <span class="usa-val">${formatUSD(item.precioUSA)}</span>
-          </div>
-        </div>
-
-        <!-- 2. Bloque Principal: Sección visual con 3 valores grandes -->
-        <div class="card-trio-grid">
-          <div class="trio-item trio-costo">
-            <span class="trio-lbl">Costo Perú</span>
-            <span class="trio-val val-costo">${formatPEN(item.costoPeru)}</span>
-          </div>
-          <div class="trio-item trio-venta">
-            <span class="trio-lbl">Venta</span>
-            <span class="trio-val val-venta">${formatPEN(item.precioVenta)}</span>
-          </div>
-          <div class="trio-item trio-ganancia ${gananciaPositiva ? 'is-profit' : 'is-loss'}">
-            <span class="trio-lbl">Ganancia</span>
-            <span class="trio-val val-ganancia">${formatPEN(item.ganancia)}</span>
-            <span class="trio-sub-margen">${textoMargen}</span>
-          </div>
-        </div>
-
-        <!-- 3. Datos Internos: Una sola línea inferior compacta y discreta -->
-        <div class="card-internal-footer">
-          <span class="calc-line-text">${item.cantidad}ud • ${Number(item.pesoKg || 0).toFixed(2)}kg • Flete ${formatUSD(item.fleteKg)} • Rep ${formatUSD(item.reempaque)} • TC ${Number(item.tc || 0).toFixed(2)} • Extras ${formatPEN(item.costosExtras)}</span>
-        </div>
-      `;
-
-      catalogoElements.lista.appendChild(card);
-    });
-
-    // Activar carga progresiva (Lazy Loading) de las imágenes visibles en pantalla
+    // Activar carga progresiva (Lazy Loading) de las imágenes que necesitan descarga
     iniciarLazyLoadingCatalogo();
   }
 
@@ -1459,8 +1566,8 @@ document.addEventListener('DOMContentLoaded', () => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             const img = entry.target;
-            cargarImagenLazy(img);
             observer.unobserve(img);
+            cargarImagenLazy(img);
           }
         });
       }, {
@@ -1477,7 +1584,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   /**
-   * Carga asíncrona de una imagen con transición suave entre el placeholder y la imagen real.
+   * Carga asíncrona de una imagen directa al elemento DOM sin bloqueos artificiales.
+   * Registra en memoria las URLs cargadas y fallidas para reutilización inmediata.
    */
   function cargarImagenLazy(img) {
     const src = img.getAttribute('data-src');
@@ -1487,28 +1595,55 @@ document.addEventListener('DOMContentLoaded', () => {
     const wrapper = img.closest('.card-thumb-wrapper');
     const placeholder = wrapper ? wrapper.querySelector('.card-thumb-placeholder') : null;
 
-    const preloader = new Image();
-    preloader.onload = () => {
+    if (imagenesCargadas.has(src)) {
       img.src = src;
+      img.classList.add('is-loaded');
+      if (placeholder) placeholder.classList.add('is-hidden');
+      return;
+    }
+
+    if (imagenesFallidas.has(src)) {
+      img.style.display = 'none';
+      if (placeholder) placeholder.classList.add('is-failed');
+      return;
+    }
+
+    img.onload = () => {
+      img.onload = null;
+      img.onerror = null;
       img.classList.add('is-loaded');
       if (placeholder) {
         placeholder.classList.add('is-hidden');
       }
+      imagenesCargadas.add(src);
     };
-    preloader.onerror = () => {
+
+    img.onerror = () => {
+      img.onload = null;
+      img.onerror = null;
       img.style.display = 'none';
       if (placeholder) {
         placeholder.classList.add('is-failed');
       }
+      imagenesFallidas.add(src);
     };
-    preloader.src = src;
+
+    img.src = src;
+
+    // Si el navegador ya tenía la imagen en caché de memoria, resolverla inmediatamente
+    if (img.complete && img.naturalWidth > 0) {
+      img.onload = null;
+      img.onerror = null;
+      img.classList.add('is-loaded');
+      if (placeholder) {
+        placeholder.classList.add('is-hidden');
+      }
+      imagenesCargadas.add(src);
+    }
   }
 
   /**
-   * Filtrado en tiempo real con el Buscador
-   */
-  /**
-   * Filtrado en tiempo real con el Buscador y los Filtros de Categoría y Género
+   * Filtrado en tiempo real con el Buscador y los Filtros de Categoría, Género y Estado
    */
   function filtrarCatalogo() {
     const termino = catalogoElements.busqueda ? catalogoElements.busqueda.value.trim() : '';
@@ -1517,28 +1652,24 @@ document.addEventListener('DOMContentLoaded', () => {
       catalogoElements.btnLimpiar.style.display = termino ? 'flex' : 'none';
     }
 
-    const normalizar = (s) => (s || '')
-      .toString()
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .trim();
+    const terminoNorm = normalizarTexto(termino);
+    const catFiltroNorm = normalizarTexto(filtroCategoriaActivo);
+    const genFiltroNorm = normalizarTexto(filtroGeneroActivo);
+    const estFiltroNorm = normalizarTexto(filtroEstadoActivo);
 
-    const terminoNorm = normalizar(termino);
-    const catFiltroNorm = normalizar(filtroCategoriaActivo);
-    const genFiltroNorm = normalizar(filtroGeneroActivo);
-    const estFiltroNorm = normalizar(filtroEstadoActivo);
+    // Asegurar que las normalizaciones en memoria estén calculadas
+    prepararCamposBusqueda(catalogoProductos);
 
     const filtrados = catalogoProductos.filter((item) => {
       // 1. Filtro por término de búsqueda en el nombre del producto
       if (terminoNorm) {
-        const nombreNorm = normalizar(item.producto);
+        const nombreNorm = item._nombreNorm !== undefined ? item._nombreNorm : normalizarTexto(item.producto);
         if (!nombreNorm.includes(terminoNorm)) return false;
       }
 
       // 2. Filtro de Categoría (Opciones: Todos | Diseñador | Árabes)
       if (catFiltroNorm && catFiltroNorm !== 'todos') {
-        const itemCatNorm = normalizar(item.categoria);
+        const itemCatNorm = item._catNorm !== undefined ? item._catNorm : normalizarTexto(item.categoria);
         if (catFiltroNorm === 'disenador') {
           if (!itemCatNorm.includes('disenad')) return false;
         } else if (catFiltroNorm === 'arabes') {
@@ -1554,7 +1685,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // - Hombre: Muestra Género = Hombre O Género = Unisex
       // - Mujer: Muestra Género = Mujer O Género = Unisex
       if (genFiltroNorm && genFiltroNorm !== 'todos') {
-        const itemGenNorm = normalizar(item.genero);
+        const itemGenNorm = item._genNorm !== undefined ? item._genNorm : normalizarTexto(item.genero);
         const esUnisex = itemGenNorm.includes('unisex');
 
         if (genFiltroNorm === 'hombre') {
@@ -1572,7 +1703,8 @@ document.addEventListener('DOMContentLoaded', () => {
       // - Disponibles muestra únicamente Estado catálogo = Disponible.
       // - Agotados muestra únicamente Estado catálogo = No disponible.
       if (estFiltroNorm && estFiltroNorm !== 'todos') {
-        const esAgotado = item.esAgotado || (item.estadoCatalogo && normalizar(item.estadoCatalogo).includes('no disponible'));
+        const itemEstNorm = item._estNorm !== undefined ? item._estNorm : normalizarTexto(item.estadoCatalogo);
+        const esAgotado = item.esAgotado || itemEstNorm.includes('no disponible');
         if (estFiltroNorm === 'disponibles' && esAgotado) return false;
         if (estFiltroNorm === 'agotados' && !esAgotado) return false;
       }
@@ -1602,6 +1734,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const parsed = JSON.parse(cacheGuardada);
           if (Array.isArray(parsed) && parsed.length > 0) {
             catalogoProductos = parsed;
+            prepararCamposBusqueda(catalogoProductos);
             renderizarCatalogo(catalogoProductos);
             const ultima = localStorage.getItem(STORAGE_KEYS.CATALOGO_LAST_SYNC) || 'Previa';
             if (catalogoElements.syncDot) catalogoElements.syncDot.className = 'sync-status-dot';
@@ -1620,6 +1753,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!urlCSV) {
       if (catalogoProductos.length === 0) {
         catalogoProductos = [...CATALOGO_DEFAULT];
+        prepararCamposBusqueda(catalogoProductos);
         localStorage.setItem(STORAGE_KEYS.CATALOGO_CACHE, JSON.stringify(catalogoProductos));
         renderizarCatalogo(catalogoProductos);
       }
@@ -1649,15 +1783,49 @@ document.addEventListener('DOMContentLoaded', () => {
       const items = convertirFilasACatalogo(rows);
 
       if (items.length > 0) {
+        const cacheGuardada = localStorage.getItem(STORAGE_KEYS.CATALOGO_CACHE);
+        const nuevoJson = JSON.stringify(items);
+        const datosCambiaron = (nuevoJson !== cacheGuardada);
+
         catalogoProductos = items;
-        localStorage.setItem(STORAGE_KEYS.CATALOGO_CACHE, JSON.stringify(items));
+        prepararCamposBusqueda(catalogoProductos);
+        podarCacheTarjetas(catalogoProductos);
+
+        localStorage.setItem(STORAGE_KEYS.CATALOGO_CACHE, nuevoJson);
         const horaSync = new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
         localStorage.setItem(STORAGE_KEYS.CATALOGO_LAST_SYNC, horaSync);
 
-        renderizarCatalogo(catalogoProductos);
         if (catalogoElements.syncDot) catalogoElements.syncDot.className = 'sync-status-dot';
         if (catalogoElements.syncText) catalogoElements.syncText.textContent = `Sincronizado (${horaSync})`;
-        showToast(`Catálogo sincronizado: ${items.length} perfumes cargados`);
+
+        const hayFiltroActivo = Boolean(
+          (catalogoElements.busqueda && catalogoElements.busqueda.value.trim() !== '') ||
+          filtroCategoriaActivo !== 'todos' ||
+          filtroGeneroActivo !== 'todos' ||
+          filtroEstadoActivo !== 'todos'
+        );
+
+        if (datosCambiaron) {
+          if (hayFiltroActivo) {
+            filtrarCatalogo();
+          } else {
+            renderizarCatalogo(catalogoProductos);
+          }
+          showToast(`Catálogo sincronizado: ${items.length} perfumes cargados`);
+        } else {
+          // Si los datos son idénticos a los ya renderizados desde el caché:
+          // No destruimos ni volvemos a renderizar tarjetas en pantalla para evitar saltos
+          if (catalogoElements.lista && catalogoElements.lista.children.length === 0 && !catalogoElements.empty.style.display) {
+            if (hayFiltroActivo) {
+              filtrarCatalogo();
+            } else {
+              renderizarCatalogo(catalogoProductos);
+            }
+          }
+          if (forzarRed) {
+            showToast(`Catálogo sincronizado: ${items.length} perfumes cargados`);
+          }
+        }
       } else {
         throw new Error('La hoja no contiene filas con datos');
       }
@@ -1665,6 +1833,7 @@ document.addEventListener('DOMContentLoaded', () => {
       console.warn('[DUNES CATÁLOGO] Error al conectar con Google Sheets:', err);
       if (catalogoProductos.length === 0) {
         catalogoProductos = [...CATALOGO_DEFAULT];
+        prepararCamposBusqueda(catalogoProductos);
         renderizarCatalogo(catalogoProductos);
       }
       if (catalogoElements.syncDot) catalogoElements.syncDot.className = 'sync-status-dot is-offline';
@@ -1692,13 +1861,19 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Buscador del Catálogo
+  // Buscador del Catálogo con debounce breve (100ms) para respuesta ágil sin congelamiento
   if (catalogoElements.busqueda) {
-    catalogoElements.busqueda.addEventListener('input', filtrarCatalogo);
+    catalogoElements.busqueda.addEventListener('input', () => {
+      clearTimeout(debounceBusquedaTimer);
+      debounceBusquedaTimer = setTimeout(() => {
+        filtrarCatalogo();
+      }, 100);
+    });
   }
 
   if (catalogoElements.btnLimpiar) {
     catalogoElements.btnLimpiar.addEventListener('click', () => {
+      clearTimeout(debounceBusquedaTimer);
       catalogoElements.busqueda.value = '';
       filtrarCatalogo();
       catalogoElements.busqueda.focus();
@@ -1735,6 +1910,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
       }
 
+      clearTimeout(debounceBusquedaTimer);
       filtrarCatalogo();
       actualizarIndicadorFiltrosActivos();
     });
@@ -1875,13 +2051,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ========================================================================
   // ARRANQUE DE LA APLICACIÓN
-  // REQUISITO CRÍTICO: La pantalla inicial SIEMPRE será el Cotizador.
+  // Pantalla inicial predeterminada: Catálogo
   // ========================================================================
   cargarValoresIniciales();
   ejecutarCalculo();
   renderizarHistorial();
   cargarCatalogo(false);
-  cambiarPestana('cotizador'); // Pantalla inicial garantizada: Cotizador
+  cambiarPestana('catalogo'); // Pantalla inicial garantizada: Catálogo
 
-  console.log('[DUNES PARFUMS] Inicializado. Módulo principal activo: Cotizador.');
+  console.log('[DUNES PARFUMS] Inicializado. Módulo principal activo: Catálogo.');
 });

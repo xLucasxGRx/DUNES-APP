@@ -67,11 +67,11 @@
 
     <!-- Menú de Navegación Principal -->
     <nav class="app-nav-tabs" role="tablist" aria-label="Navegación principal">
-      <button class="nav-tab is-active" id="tab-btn-cotizador" role="tab" aria-selected="true" aria-controls="vista-cotizador" data-tab="cotizador">
+      <button class="nav-tab" id="tab-btn-cotizador" role="tab" aria-selected="false" aria-controls="vista-cotizador" data-tab="cotizador">
         <span class="tab-icon">⚡</span>
         <span class="tab-label">Cotizador</span>
       </button>
-      <button class="nav-tab" id="tab-btn-catalogo" role="tab" aria-selected="false" aria-controls="vista-catalogo" data-tab="catalogo">
+      <button class="nav-tab is-active" id="tab-btn-catalogo" role="tab" aria-selected="true" aria-controls="vista-catalogo" data-tab="catalogo">
         <span class="tab-icon">📖</span>
         <span class="tab-label">Catálogo</span>
       </button>
@@ -86,8 +86,8 @@
     </nav>
 
     <main class="app-main">
-      <!-- VISTA 1: COTIZADOR (MÓDULO PRINCIPAL / PANTALLA INICIAL) -->
-      <div id="vista-cotizador" class="app-view is-active">
+      <!-- VISTA 1: COTIZADOR (MÓDULO ACCESIBLE DESDE PESTAÑAS) -->
+      <div id="vista-cotizador" class="app-view is-hidden">
         <!-- Sección Formulario: NUEVA COTIZACIÓN -->
         <section class="section-card form-section" id="seccion-formulario">
         <div class="section-header">
@@ -319,8 +319,8 @@
         </section>
       </div><!-- /#vista-cotizador -->
 
-      <!-- VISTA 2: CATÁLOGO (SOLO CONSULTA CONECTADO A GOOGLE SHEETS) -->
-      <div id="vista-catalogo" class="app-view is-hidden">
+      <!-- VISTA 2: CATÁLOGO (PANTALLA INICIAL / VISTA PRINCIPAL) -->
+      <div id="vista-catalogo" class="app-view is-active">
         <section class="section-card catalog-section" id="seccion-catalogo">
           <!-- 1. Título principal centrado con protagonismo -->
           <h2 class="catalog-main-title">CATÁLOGO DE PERFUMES</h2>
