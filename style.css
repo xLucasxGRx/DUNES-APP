@@ -68,6 +68,7 @@ html {
   background-color: var(--bg-noir);
   color: var(--text-primary);
   scroll-behavior: smooth;
+  scrollbar-gutter: stable;
 }
 
 body {
@@ -219,6 +220,10 @@ body {
   border-bottom: 1px solid var(--gold-border);
   position: relative;
   gap: 0.85rem;
+  width: 100%;
+  max-width: 668px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .app-header::after {
@@ -1546,6 +1551,10 @@ body {
   position: sticky;
   top: 0.4rem;
   z-index: 90;
+  width: 100%;
+  max-width: 668px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 @media (max-width: 420px) {
@@ -1805,6 +1814,9 @@ body {
   align-items: center;
   gap: 0.45rem;
   width: 100%;
+  max-width: 880px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .catalog-search-bar {
@@ -1946,6 +1958,9 @@ body {
   align-items: center;
   padding: 0.1rem 0.2rem 0.05rem;
   width: 100%;
+  max-width: 880px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .catalog-results-counter {
@@ -1973,6 +1988,9 @@ body {
   border-radius: var(--radius-md);
   box-sizing: border-box;
   width: 100%;
+  max-width: 880px;
+  margin-left: auto;
+  margin-right: auto;
   max-height: 400px;
   opacity: 1;
   overflow: hidden;
@@ -2487,5 +2505,296 @@ body {
   color: var(--text-muted);
   max-width: 320px;
 }
+
+/* ==========================================================================
+   Paginación Compacta del Catálogo — DUNES PARFUMS Luxury
+   ========================================================================== */
+.catalog-pagination-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  max-width: 640px;
+  margin: 0.85rem auto 0 auto;
+  padding: 0.65rem 0.85rem;
+  background: linear-gradient(145deg, rgba(20, 16, 13, 0.98), rgba(14, 11, 9, 0.98));
+  border: 1px solid rgba(212, 175, 55, 0.22);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.btn-pagination {
+  background: rgba(25, 20, 16, 0.85);
+  border: 1px solid rgba(212, 175, 55, 0.28);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.45rem 0.85rem;
+  min-height: 38px;
+  cursor: pointer;
+  outline: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn-pagination .pagination-arrow {
+  font-size: 1.15rem;
+  line-height: 1;
+  color: var(--gold-primary);
+  transition: transform 0.15s ease;
+}
+
+.btn-pagination .pagination-text {
+  letter-spacing: 0.02em;
+}
+
+.btn-pagination:not(:disabled):hover {
+  background: rgba(35, 28, 22, 0.95);
+  border-color: var(--gold-primary);
+  color: var(--gold-light);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4), 0 0 8px rgba(212, 167, 59, 0.15);
+}
+
+.btn-pagination:not(:disabled):active {
+  transform: scale(0.96);
+}
+
+.btn-pagination:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+  border-color: rgba(212, 175, 55, 0.1);
+  color: var(--text-muted);
+  box-shadow: none;
+  transform: none;
+}
+
+.btn-pagination:disabled .pagination-arrow {
+  color: var(--text-muted);
+}
+
+.pagination-info {
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--gold-light);
+  letter-spacing: 0.02em;
+  text-align: center;
+  white-space: nowrap;
+}
+
+@media screen and (max-width: 400px) {
+  .catalog-pagination-nav {
+    padding: 0.5rem 0.6rem;
+    gap: 0.5rem;
+  }
+
+  .btn-pagination {
+    padding: 0.4rem 0.65rem;
+    font-size: 0.74rem;
+    min-height: 36px;
+  }
+
+  .pagination-info {
+    font-size: 0.75rem;
+  }
+}
+
+/* ==========================================================================
+   OPTIMIZACIÓN RESPONSIVE DE TARJETAS EN CATÁLOGO Y COTIZACIONES GUARDADAS
+   Laptop y Escritorio (min-width: 960px)
+   ========================================================================== */
+
+/* 1. Protección estricta del Cotizador: Ancho estándar invariable a 700px */
+#vista-cotizador {
+  max-width: 700px;
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+}
+
+/* 2. Ampliación de contenedor exclusiva para Catálogo y Cotizaciones en Pantallas Intermedias y Desktop */
+@media screen and (min-width: 768px) and (max-width: 959px) {
+  .app-container:has(#vista-catalogo.is-active) {
+    max-width: 740px;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}
+
+@media screen and (min-width: 960px) {
+  .app-container:has(#vista-catalogo.is-active),
+  .app-container:has(#vista-cotizaciones.is-active) {
+    max-width: 1240px;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+
+  /* Cabecera y Menú de pestañas con ancho uniforme y centrado idéntico al Cotizador */
+  .app-header,
+  .app-nav-tabs {
+    max-width: 668px;
+    margin-left: auto;
+    margin-right: auto;
+    width: 100%;
+  }
+
+  /* Limitación y centrado del buscador y filtros en el Catálogo */
+  .catalog-search-filter-row,
+  .catalog-results-counter-row,
+  .catalog-filters-container {
+    max-width: 880px;
+    margin-left: auto;
+    margin-right: auto;
+    width: 100%;
+  }
+
+  /* Vista Catálogo: Ajuste de padding de la sección */
+  .catalog-section {
+    padding: 0.85rem 1.25rem 1.25rem;
+    gap: 0.5rem;
+  }
+
+  /* Barra de paginación compacta adaptada al ancho completo en escritorio */
+  .catalog-pagination-nav {
+    max-width: 100%;
+    margin: 1rem auto 0 auto;
+    padding: 0.75rem 1.25rem;
+  }
+
+  /* Vista Cotizaciones Guardadas: Sección e Historial en 2 columnas (Intacto) */
+  .history-section {
+    padding: 1.25rem 1.25rem;
+  }
+
+  .historial-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.85rem;
+    max-width: 100%;
+    width: 100%;
+  }
+
+  /* Optimización interna de las tarjetas de cotización en escritorio (Intacto) */
+  .quote-card {
+    padding: 0.85rem 1rem;
+    gap: 0.65rem;
+    height: 100%;
+    box-sizing: border-box;
+  }
+
+  .quote-card .quote-card-footer {
+    margin-top: auto;
+  }
+}
+
+/* ==========================================================================
+   DISTRIBUCIÓN RESPONSIVE DEL CATÁLOGO: 2 COLUMNAS (INTERMEDIO) Y 3 COLUMNAS (ESCRITORIO)
+   ========================================================================== */
+
+/* A. Pantallas intermedias (768px a 1199px): 2 tarjetas por fila en Catálogo */
+@media screen and (min-width: 768px) {
+  #vista-catalogo .catalogo-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.85rem;
+    max-width: 100%;
+    margin: 0;
+    width: 100%;
+  }
+
+  #vista-catalogo .catalog-card {
+    padding: 0.65rem 0.85rem;
+    gap: 0.45rem;
+    height: 100%;
+    box-sizing: border-box;
+  }
+
+  #vista-catalogo .catalog-card .card-internal-footer {
+    margin-top: auto;
+  }
+}
+
+/* B. Monitores y Laptops amplios (min-width: 1200px): 3 tarjetas por fila en Catálogo */
+@media screen and (min-width: 1200px) {
+  #vista-catalogo .catalogo-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+
+  /* Optimización interna de tarjetas compactas sin pérdida de información */
+  #vista-catalogo .catalog-card {
+    padding: 0.55rem 0.65rem;
+    gap: 0.40rem;
+    height: 100%;
+    box-sizing: border-box;
+  }
+
+  #vista-catalogo .card-top-section {
+    gap: 0.45rem;
+  }
+
+  #vista-catalogo .card-title-group {
+    gap: 0.45rem;
+  }
+
+  #vista-catalogo .card-product-name {
+    font-size: 0.85rem;
+    line-height: 1.22;
+  }
+
+  #vista-catalogo .card-usa-tag {
+    padding: 0.18rem 0.38rem;
+    min-width: 54px;
+  }
+
+  #vista-catalogo .card-usa-tag .usa-lbl {
+    font-size: 0.56rem;
+  }
+
+  #vista-catalogo .card-usa-tag .usa-val {
+    font-size: 0.84rem;
+  }
+
+  #vista-catalogo .card-trio-grid {
+    padding: 0.32rem 0.42rem;
+    gap: 0.25rem;
+    grid-template-columns: 1fr 1fr 1.15fr;
+  }
+
+  #vista-catalogo .trio-lbl {
+    font-size: 0.58rem;
+    margin-bottom: 0.08rem;
+  }
+
+  #vista-catalogo .trio-val {
+    font-size: 0.98rem;
+  }
+
+  #vista-catalogo .trio-sub-margen {
+    font-size: 0.58rem;
+    margin-top: 0.08rem;
+  }
+
+  #vista-catalogo .card-internal-footer {
+    padding-top: 0.22rem;
+    margin-top: auto;
+  }
+
+  #vista-catalogo .calc-line-text {
+    font-size: 0.63rem;
+    line-height: 1.35;
+  }
+}
+
 
 

@@ -1,17 +1,21 @@
 # DUNES PARFUMS — Estado Actual, Pruebas y Deuda Técnica
 
-> **Fecha del análisis:** 17 de octubre de 2026  
-> **Alcance revisado:** Ejecución de suites de prueba con Node.js v23.3.0, inspección de árboles de código, análisis de Git y detección de inconsistencias estáticas.
+> **Fecha del análisis:** 16 de noviembre de 2026  
+> **Versión de la aplicación:** v2.4 (PWA Offline / GitHub Pages)  
+> **Alcance revisado:** Ejecución real de suites de prueba con Node.js v23.3.0, inspección de árboles de código, análisis de Git hasta commit `743935d` e identificación de puntos de mejora.
 
 ---
 
 ## 1. Estado de Git y Entorno de Trabajo
 
 - **Rama Actual:** `main` (Sincronizada con `origin/main`).
-- **Commit de Referencia:** `501d2de614722612e4c74c1d778747245f6b21cd`  
-  *Mensaje de commit:* `gooooood` (10 de septiembre de 2026).
-- **Estado del Working Tree:** Limpio (`nothing to commit, working tree clean`).
-- **Entorno de Ejecución:** Windows 11, Shell PowerShell, Node.js v23.3.0.
+- **Commit HEAD:** `743935d80bed66a34ca5f3957b7cce7a9e092524`  
+  *Mensaje de commit:* `IMAGE` (17 de octubre de 2026).
+- **Commits Recientes Clave:**
+  - `743935d`: Implementación de arranque garantizado en Catálogo (`vistaActiva = 'catalogo'`), motor de caché DOM (`tarjetaDomCache`), conjuntos de imágenes (`imagenesCargadas`, `imagenesFallidas`), prenormalización de búsqueda (`prepararCamposBusqueda`) y optimización de observador de lazy loading.
+  - `34526e3`: Integración del cálculo y visualización de `% Margen` en las tarjetas del catálogo (`.trio-sub-margen`).
+  - `501d2de`: Separación estricta del contador fijo de inventario general y el contador dinámico de resultados coincidentes.
+- **Entorno de Ejecución:** Windows, Shell PowerShell, Node.js v23.3.0.
 
 ---
 
@@ -23,7 +27,7 @@ Se ejecutaron las 4 suites de prueba en el entorno local. A continuación se det
 - **Comando:** `node tests/calculator.test.js`
 - **Resultado:** **Aprobada al 100% (Código de salida: 0)**.
 - **Detalle de casos verificados:**
-  - Caso 1: Datos del Excel original (`20.90 USD`, flete `8.00 USD`, costo Perú `99.71 PEN`, ganancia `75.30 PEN`).
+  - Caso 1: Caso original de Excel (`20.90 USD`, flete `8.00 USD`, costo Perú `99.71 PEN`, ganancia `75.30 PEN`).
   - Caso 2: Prompt maestro (`33.50 USD`, flete `5.70 USD`, reempaque `$1.00`, venta `175 PEN`, ganancia `23.32 PEN`, margen `13.33%`).
   - Caso 3: Múltiples unidades y precio venta en cero (sin valores `NaN` en margen).
   - Caso 4: Flete proporcional por cantidad de unidades (`(peso * cantidad) * envioKg`).
@@ -50,15 +54,15 @@ Se ejecutaron las 4 suites de prueba en el entorno local. A continuación se det
 - **Resultado:** **Aprobada al 100% (Código de salida: 0)**.
 - **Detalle de casos verificados:**
   - Verificación sintáctica sin errores en `app.js`, `js/calculator.js`, `service-worker.js` y `sw.js`.
-  - Correspondencia exacta de 46 IDs entre `index.html` y los selectores de `app.js`.
+  - Correspondencia exacta de **46 IDs** entre `index.html` y los selectores de `app.js`.
   - Verificación matemática headless contra los casos de prueba del Excel.
-  - Verificación de existencia física de archivos obligatorios de despliegue (`manifest.json`, `service-worker.js`, iconos y `README.md`).
+  - Verificación de existencia física de archivos obligatorios de despliegue (`manifest.json`, `service-worker.js`, iconos en `assets/` y `README.md`).
 
 ---
 
 ### 2.4. Suite de Catálogo Google Sheets (`tests/sheets.test.js`)
 - **Comando:** `node tests/sheets.test.js`
-- **Resultado:** **FALLA DE ASERCIÓN ESTÁTICA (Código de salida: 1)**.
+- **Resultado:** **FALLA DE ASERCIÓN ESTÁTICA EN CASO 2 (Código de salida: 1)**.
 - **Diagnóstico del Error:**
   ```text
   AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
@@ -69,7 +73,7 @@ Se ejecutaron las 4 suites de prueba en el entorno local. A continuación se det
   ```
 - **Causa Raíz:**  
   El test conecta exitosamente a internet y descarga el CSV en vivo desde Google Drive. Sin embargo, la línea 222 del test tiene escrita una expectativa fija (`assert.strictEqual(items[0].producto, '9 Am Dive 3.4 Oz Edp Unisex')`). Dado que la hoja remota fue editada o reordenada por los dueños de la tienda, la primera fila actual es `'First Instinct Blue 3.4 Oz Edp Women'`.
-- **Impacto:** Bajo para la aplicación en producción (la app parsea y muestra todos los perfumes sin problemas), pero representa un test frágil que debe actualizarse para no depender de la ordenación de una fuente externa cambiante.
+- **Impacto:** Bajo para la aplicación en producción (la app parsea y muestra todos los perfumes sin problemas), pero representa un test frágil que debe actualizarse para no depender de la ordenación de una fuente externa cambiante. El Caso 1 (parser RFC 4180) y el Caso 3 (generación de HTML Luxury) pasan limpiamente.
 
 ---
 
@@ -78,28 +82,26 @@ Se ejecutaron las 4 suites de prueba en el entorno local. A continuación se det
 ### 3.1. Inconsistencias y Redundancias
 
 1. **Duplicidad de Carpetas de Iconos (`./assets/` vs `./icons/`):**  
-   Existen copias idénticas de `icon-192.png`, `icon-512.png`, `favicon.ico`, etc. en ambas carpetas. El script `scripts/generate_icons.py` genera en ambas. `index.html` y `service-worker.js` apuntan primordialmente a `./assets/`. `./icons/` es redundante pero se conserva para evitar enlaces rotos históricos.
+   Existen copias idénticas de los iconos en ambas carpetas. `index.html` y `service-worker.js` apuntan primordialmente a `./assets/`. `./icons/` es redundante pero se conserva para evitar enlaces rotos históricos.
 2. **Dualidad de Service Workers (`service-worker.js` vs `sw.js`):**  
-   `service-worker.js` es el archivo real. `sw.js` contiene únicamente una línea `importScripts('./service-worker.js');`. Aunque sirve de proxy de compatibilidad, añade un archivo extra innecesario si todos los registros en `app.js` apuntan a `service-worker.js`.
+   `service-worker.js` es el archivo real con la versión `dunes-parfums-v2.4`. `sw.js` contiene únicamente una línea `importScripts('./service-worker.js');`.
 3. **Falta de Manifiesto `package.json`:**  
    El repositorio no posee `package.json`. No se pueden ejecutar scripts estándar (`npm test`, `npm run lint`). Los desarrolladores deben conocer de antemano las rutas de los archivos dentro de `tests/`.
 4. **URL de Google Sheets en Código Duro:**  
    La constante `DEFAULT_SHEETS_CSV_URL` está escrita dentro de `app.js:21`. Aunque `localStorage` permite almacenar una URL alternativa (`dunes_google_sheets_url_v1`), no hay una interfaz visual en el modal de configuración para que el usuario ingrese una nueva URL de Google Sheets sin tocar la consola del navegador.
-5. **Monolito de Control en `app.js` (1876 líneas):**  
-   Aunque el código está bien estructurado en bloques de comentarios, `app.js` concentra la gestión de eventos, lógica de cotización, persistencia, modal de detalle, modal de configuración, descarga de Google Sheets, parser de CSV, filtrado, renderizado del catálogo y observador de lazy loading.
+5. **Monolito de Control en `app.js` (2,063 líneas):**  
+   `app.js` concentra la gestión de eventos, lógica de cotización, persistencia, modal de detalle, modal de configuración, descarga de Google Sheets, parser de CSV, filtrado, observador de lazy loading y la caché de nodos DOM.
 
 ---
 
 ## 4. Aspectos que Requieren Validación en Dispositivos Reales
 
-Las siguientes características fueron comprobadas a nivel de código y tests headless, pero requieren validación física en hardware:
-
 1. **Comportamiento háptico y Safe Areas en iOS Safari:**  
    Verificar el espaciado en dispositivos reales con Dynamic Island (iPhone 14 Pro, 15, 16) para confirmar que `env(safe-area-inset-top)` y `env(safe-area-inset-bottom)` eviten solapamientos con la barra de gestos inferior y el notch.
 2. **Ciclo de Vida Offline en Dispositivo Móvil:**  
    Validar que al activar el modo avión en un iPhone con la app instalada en la pantalla de inicio, la aplicación cargue de inmediato desde la caché del Service Worker y que el indicador de estado cambie adecuadamente a "Offline (PWA)".
-3. **Rendimiento con Hojas de Cálculo Masivas:**  
-   Actualmente la hoja cuenta con decenas de registros. Es necesario comprobar si el parser CSV y la renderización en el DOM mantienen 60 FPS si el catálogo supera los 500 productos.
+3. **Rendimiento con Hojas de Cálculo Masivas (> 500 productos):**  
+   Aunque la caché de nodos DOM (`tarjetaDomCache`) y el *debounce* resuelven el cuello de botella en el catálogo actual, convendría probar la carga si el catálogo crece exponencialmente.
 
 ---
 
@@ -115,23 +117,11 @@ Las siguientes características fueron comprobadas a nivel de código y tests he
 > [!NOTE]  
 > Las siguientes sugerencias son propuestas técnicas para futuros ciclos de desarrollo y **no constituyen decisiones tomadas por el usuario**.
 
-1. **Exportación de Cotizaciones a PDF / Imagen / WhatsApp:**  
-   Permitir que el usuario comparta la tarjeta de cotización formateada directamente a clientes por WhatsApp o la guarde en formato imagen (usando canvas o html2canvas).
-2. **Incorporación de `package.json` ligero:**  
-   Crear un `package.json` mínimo sin dependencias en producción que solo contenga scripts de npm:
-   ```json
-   {
-     "scripts": {
-       "test": "node tests/calculator.test.js && node tests/catalog-filters.test.js && node tests/validate-app.js",
-       "test:sheets": "node tests/sheets.test.js"
-     }
-   }
-   ```
-3. **Modularización de `app.js` con Módulos ES6:**  
-   Dividir `app.js` en módulos nativos (`<script type="module">`):
-   - `js/quotation.js` (Formulario y cálculo).
-   - `js/history.js` (Almacenamiento y modal de cotizaciones).
-   - `js/catalog.js` (Google Sheets, filtros, lazy loading).
-   - `js/config.js` (Modal de configuración base).
-4. **Búsqueda Avanzada por Notas Olfativas o Marcas:**  
-   Añadir etiquetas visuales de marcas (Dior, Afnan, Lattafa, Chanel) en el catálogo para filtrar con un solo toque.
+1. **Exportación de Cotizaciones a WhatsApp / PDF:**  
+   Permitir que el usuario comparta la tarjeta de cotización formateada directamente a clientes por WhatsApp (`navigator.share`) o la guarde en formato imagen o PDF.
+2. **Transferir Producto del Catálogo al Cotizador con un Toque:**  
+   Permitir pulsar una tarjeta del Catálogo para transferir automáticamente su nombre, precio USA y peso al Cotizador y realizar ajustes rápidos.
+3. **Incorporación de `package.json` ligero:**  
+   Crear un `package.json` mínimo sin dependencias en producción que solo contenga scripts de npm para testing local.
+4. **Modularización de `app.js` con Módulos ES6:**  
+   Dividir `app.js` en submódulos limpios (`js/quotation.js`, `js/history.js`, `js/catalog.js`, `js/config.js`).

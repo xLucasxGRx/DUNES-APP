@@ -193,5 +193,87 @@ assert.strictEqual(globalMetricsBefore.agotados, globalMetricsAfter.agotados);
 
 console.log('✔ [PASS] Separación verificada: Contador superior fijo con inventario general y contador dinámico de resultados');
 
-console.log('\n🎉 TODAS LAS VALIDACIONES DE FILTROS PASARON AL 100%');
+// 5. Verificación de Paginación Compacta (30 por página)
+assert(html.includes('id="catalogo-paginacion"'), 'index.html debe tener catalogo-paginacion');
+assert(html.includes('id="btn-pagina-anterior"'), 'index.html debe tener btn-pagina-anterior');
+assert(html.includes('id="btn-pagina-siguiente"'), 'index.html debe tener btn-pagina-siguiente');
+assert(html.includes('id="catalogo-pagina-info"'), 'index.html debe tener catalogo-pagina-info');
+
+assert(css.includes('.catalog-pagination-nav'), 'style.css debe tener .catalog-pagination-nav');
+assert(css.includes('.btn-pagination'), 'style.css debe tener .btn-pagination');
+assert(css.includes('.pagination-info'), 'style.css debe tener .pagination-info');
+
+assert(appJsCode.includes('ITEMS_POR_PAGINA = 30'), 'app.js debe definir ITEMS_POR_PAGINA = 30');
+assert(appJsCode.includes('paginaActualCatalogo'), 'app.js debe gestionar paginaActualCatalogo');
+assert(appJsCode.includes('actualizarPaginacionUI'), 'app.js debe tener función actualizarPaginacionUI');
+assert(appJsCode.includes('cambiarPaginaCatalogo'), 'app.js debe tener función cambiarPaginaCatalogo');
+
+// Simulación de paginación con catálogo de 800 productos
+const mock800 = [];
+for (let i = 1; i <= 800; i++) {
+  mock800.push({
+    id: `p-${i}`,
+    producto: `Perfume Número ${i}`,
+    categoria: (i % 2 === 0) ? 'Diseñador' : 'Árabes',
+    genero: (i % 3 === 0) ? 'Unisex' : (i % 3 === 1 ? 'Hombre' : 'Mujer'),
+    estadoCatalogo: (i % 5 === 0) ? 'No disponible' : 'Disponible',
+    esAgotado: (i % 5 === 0)
+  });
+}
+
+const ITEMS_POR_PAGINA = 30;
+
+function paginar(items, pagina) {
+  const totalPaginas = Math.ceil(items.length / ITEMS_POR_PAGINA) || 1;
+  const pag = Math.max(1, Math.min(pagina, totalPaginas));
+  const inicio = (pag - 1) * ITEMS_POR_PAGINA;
+  const fin = inicio + ITEMS_POR_PAGINA;
+  return {
+    paginaActual: pag,
+    totalPaginas,
+    itemsPagina: items.slice(inicio, fin),
+    tieneAnterior: pag > 1,
+    tieneSiguiente: pag < totalPaginas
+  };
+}
+
+// 5.1. Catálogo de 800 productos: 30 tarjetas por página
+const p1 = paginar(mock800, 1);
+assert.strictEqual(p1.itemsPagina.length, 30, 'Página 1 debe tener exactamente 30 productos');
+assert.strictEqual(p1.totalPaginas, 27, '800 productos con 30 por página deben generar 27 páginas');
+assert.strictEqual(p1.tieneAnterior, false, 'En página 1 Anterior debe estar deshabilitado');
+assert.strictEqual(p1.tieneSiguiente, true, 'En página 1 Siguiente debe estar habilitado');
+console.log('✔ [PASS] Catálogo de 800 productos: exactamente 30 items renderizados en página 1 y 27 páginas en total');
+
+// 5.2. Navegación intermedia y última página
+const pIntermedia = paginar(mock800, 15);
+assert.strictEqual(pIntermedia.itemsPagina.length, 30);
+assert.strictEqual(pIntermedia.tieneAnterior, true);
+assert.strictEqual(pIntermedia.tieneSiguiente, true);
+
+// Última página: 800 - (26 * 30) = 800 - 780 = 20 productos restantes
+const pUltima = paginar(mock800, 27);
+assert.strictEqual(pUltima.itemsPagina.length, 20, 'La última página debe mostrar exactamente los 20 productos restantes');
+assert.strictEqual(pUltima.tieneAnterior, true);
+assert.strictEqual(pUltima.tieneSiguiente, false, 'En última página Siguiente debe estar deshabilitado');
+console.log('✔ [PASS] Navegación entre primera, intermedia y última página verificada (última página con productos restantes correctos)');
+
+// 5.3. Búsqueda de un producto ubicado originalmente al final del catálogo (Item 800)
+const busquedaFinal = filtrar(mock800, 'todos', 'todos', 'todos', 'Número 800');
+assert.strictEqual(busquedaFinal.length, 1);
+assert.strictEqual(busquedaFinal[0].producto, 'Perfume Número 800');
+const pBusqueda = paginar(busquedaFinal, 1);
+assert.strictEqual(pBusqueda.itemsPagina.length, 1);
+assert.strictEqual(pBusqueda.totalPaginas, 1, 'Un solo resultado debe tener 1 página y ocultar navegación');
+console.log('✔ [PASS] Búsqueda de producto del final del catálogo encontrada con éxito');
+
+// 5.4. Combinación de filtros con paginación
+const filtradosComb = filtrar(mock800, 'diseñador', 'hombre', 'disponibles');
+assert(filtradosComb.length > 30, 'Debe haber más de 30 productos con estos filtros');
+const pComb = paginar(filtradosComb, 1);
+assert.strictEqual(pComb.itemsPagina.length, 30, 'Página 1 de filtros combinados debe mostrar 30 productos');
+assert(pComb.totalPaginas > 1, 'Filtros combinados deben generar múltiples páginas');
+console.log('✔ [PASS] Combinación de múltiples filtros con paginación de 30 productos verificada');
+
+console.log('\n🎉 TODAS LAS VALIDACIONES DE FILTROS Y PAGINACIÓN PASARON AL 100%');
 

@@ -1,7 +1,8 @@
 # DUNES PARFUMS — Continuidad del Desarrollo y Registro de Cambios
 
-> **Fecha del análisis:** 17 de octubre de 2026  
-> **Alcance revisado:** Historial de Git desde commit inicial `0e128ac` hasta `501d2de`, registros de diseño en `docs/superpowers/`, convenciones de código y decisiones de arquitectura.
+> **Fecha del análisis:** 16 de noviembre de 2026  
+> **Versión de la aplicación:** v2.4 (PWA Offline / GitHub Pages)  
+> **Alcance revisado:** Historial de Git desde commit inicial `0e128ac` hasta `743935d`, registros de diseño, convenciones de código y decisiones de arquitectura.
 
 ---
 
@@ -13,11 +14,13 @@ Basado estrictamente en la evidencia del código y los mensajes de commit:
 | :--- | :--- | :--- |
 | **Arquitectura 100% Vanilla (HTML + CSS + JS)** | Permite alojar y ejecutar la PWA directamente en GitHub Pages sin pasos de compilación (*build step*), asegurando carga inmediata en móviles y cero vulnerabilidades de dependencias npm. | Ausencia de `package.json` y scripts de empaquetado; ejecución directa en el navegador. |
 | **Identidad Visual de Perfumería Luxury** | Inspirada en marcas globales de alta gama (Dior, Creed, Tom Ford) con paleta oficial extraída del logo DUNES: Fondo negro obsidiana (`#08070a`), acentos en oro pulido (`#d4a73b`), ganancias en verde esmeralda (`#10b981`) y textos crema. | Variables en `style.css:6-54`, commit `64fb474`. |
-| **El Cotizador como Pantalla Inicial Absoluta** | Regla de negocio crítica: el objetivo primario de la app es cotizar importaciones. Al abrir o recargar la app, la pestaña activa forzosa debe ser siempre el Cotizador. | `app.js:1872`: `cambiarPestana('cotizador')`. |
+| **El Catálogo como Pantalla Inicial Predeterminada** | Decisión comercial estratégica: los clientes y revendedores consultan primero la disponibilidad y precios del catálogo de Google Sheets al ingresar. El cotizador queda accesible en la pestaña adyacente para cálculos personalizados. | `app.js:2060`: `cambiarPestana('catalogo')`, commit `743935d`. |
+| **Caché de Nodos DOM (`tarjetaDomCache`) en Catálogo** | Al filtrar o escribir en el buscador, recrear el HTML con `innerHTML` destruía imágenes y causaba parpadeos. La caché reutiliza elementos DOM intactos mediante `DocumentFragment` y `replaceChildren()`. | `app.js:1370-1473`, commit `743935d`. |
+| **Visualización de % Margen en Tarjetas del Catálogo** | Permite a los revendedores conocer inmediatamente el porcentaje de retorno sobre la venta sugerida sin tener que ingresar manualmente los datos al Cotizador. | `app.js:1385-1394`, `style.css` (`.trio-sub-margen`), commit `34526e3`. |
 | **Capacidad de Caja Courier Fija en 4 Unidades** | En la logística courier a Perú, las cajas estándar de reempaque albergan hasta 4 perfumes. Por ende, el reempaque unitario equivale a $\text{Precio Caja} \div 4$. | `app.js:24-33`, commit `7d38381`. |
-| **Catálogo de Solo Consulta (Google Sheets como CMS)** | El inventario de perfumes lo gestionan los administradores en una hoja de Google Drive. La app actúa únicamente como visor comercial; no se implementan formularios de edición para evitar conflictos de concurrencia. | `app.js:915-922`, commits `5c54ce5` a `6878f39`. |
-| **Regla Inclusiva de Género para Perfumes Unisex** | En perfumería árabe y nicho, la mayoría de fragancias son unisex. Al filtrar por "Hombre" o "Mujer", la app incluye automáticamente los unisex para no ocultar opciones comerciales viables. | `app.js:1544-1555`, commit `61870d8`. |
-| **Separación de Contadores en el Catálogo** | Para evitar que el usuario piense que la tienda tiene pocos productos al hacer una búsqueda, el contador superior muestra el inventario total inmutable (`🟢 X DISPONIBLES • 🔴 Y AGOTADOS`), mientras que un contador secundario muestra los resultados coincidentes. | `app.js:1309-1351`, commit `501d2de`. |
+| **Catálogo de Solo Consulta (Google Sheets como CMS)** | El inventario de perfumes lo gestionan los administradores en una hoja de Google Drive. La app actúa únicamente como visor comercial; no se implementan formularios de edición para evitar conflictos de concurrencia. | `app.js:925-931`, commits `5c54ce5` a `6878f39`. |
+| **Regla Inclusiva de Género para Perfumes Unisex** | En perfumería árabe y nicho, la mayoría de fragancias son unisex. Al filtrar por "Hombre" o "Mujer", la app incluye automáticamente los unisex para no ocultar opciones comerciales viables. | `app.js:1682-1698`, commit `61870d8`. |
+| **Separación de Contadores en el Catálogo** | Para evitar que el usuario piense que la tienda tiene pocos productos al hacer una búsqueda, el contador superior muestra el inventario total inmutable (`🟢 X DISPONIBLES • 🔴 Y AGOTADOS`), mientras que un contador secundario muestra los resultados coincidentes. | `app.js:1475-1518`, commit `501d2de`. |
 | **Rutas Relativas (`./`) en Todos los Recursos** | Esencial para que la PWA funcione tanto en la raíz de un dominio (`https://ejemplo.com/`) como en un subdirectorio de GitHub Pages (`https://usuario.github.io/DUNES-APP/`). | `service-worker.js:10-26`, `manifest.json`, `index.html`. |
 
 ---
@@ -34,6 +37,8 @@ Basado estrictamente en la evidencia del código y los mensajes de commit:
 
 ## 3. Historial de Cambios Identificables (Git)
 
+- **`743935d` (17/10/2026):** *IMAGE* — Optimización masiva de rendimiento de catálogo con caché DOM (`tarjetaDomCache`), pre-computación de normalización de textos (`prepararCamposBusqueda`), sets de imágenes cargadas/fallidas, lazy loading reactivo y arranque garantizado en Catálogo (`vistaActiva = 'catalogo'`).
+- **`34526e3` (17/10/2026):** *MARGEN* — Cálculo e inclusión del `% Margen` en las tarjetas Luxury del catálogo (`.trio-sub-margen`).
 - **`501d2de` (10/09/2026):** *gooooood* — Separación del contador de inventario general inmutable y nuevo contador dinámico de resultados (`#catalogo-contador-resultados`).
 - **`61870d8` (10/09/2026):** *filtros* — Implementación de acordeón desplegable de filtros (Categoría, Género inclusivo y Estado) y diseño compacto.
 - **`4f4d8f5` (10/09/2026):** *mejroas* — Soporte de imágenes con Lazy Loading e IntersectionObserver, detección de estado disponible/agotado en columna O.
@@ -56,6 +61,8 @@ Basado estrictamente en la evidencia del código y los mensajes de commit:
    Actualmente la URL se puede guardar en `localStorage` bajo `dunes_google_sheets_url_v1`, pero el modal `#modal-configuracion` no expone un input para que el usuario la actualice visualmente.
 3. **Añadir botón de Compartir Cotización:**  
    Implementar `navigator.share()` para compartir el desglose financiero por WhatsApp o copiarlo al portapapeles con formato de texto elegante.
+4. **Transferencia Rápida de Producto del Catálogo al Cotizador:**  
+   Añadir una acción o botón en cada tarjeta del catálogo para cargar automáticamente nombre, precio USA y peso en el cotizador con un solo clic.
 
 ---
 
@@ -69,7 +76,16 @@ Basado estrictamente en la evidencia del código y los mensajes de commit:
 
 ## 6. Registro de Cambios de Documentación
 
+### [16 de Noviembre de 2026] — Actualización Integral v2.4 (Commits `34526e3` y `743935d`)
+- **Autor:** Asistente de IA (Antigravity).
+- **Alcance:** Actualización completa de los 6 documentos de `./DOCUMENTACION/` para reflejar el estado actual del repositorio.
+- **Cambios Registrados:**
+  1. Nueva regla de arranque comercial: El Catálogo es la pantalla principal inicial de bienvenida (`cambiarPestana('catalogo')`).
+  2. Documentación del motor de alto rendimiento con caché de nodos DOM (`tarjetaDomCache`), pre-computación de búsquedas y manipulación atómica con `DocumentFragment` / `replaceChildren()`.
+  3. Documentación del cálculo y visualización de `% Margen` en las tarjetas Luxury del Catálogo (`.trio-sub-margen`).
+  4. Revisión del estado de las 4 suites de pruebas (matemática, filtros, estática y sheets live).
+  5. Sincronización de referencias de versiones a `v2.4` (Service Worker `dunes-parfums-v2.4`, CSS/JS `?v=2.4`).
+
 ### [17 de Octubre de 2026] — Auditoría Integral y Creación de Documentación Central
 - **Autor:** Asistente de IA (Antigravity).
-- **Alcance:** Creación de la carpeta `./DOCUMENTACION/` y generación de los 6 documentos de referencia técnica (`00` a `05`) a partir del análisis del código fuente, suites de pruebas y el repositorio Git.
-- **Hallazgos Clave Registrados:** Identificación del estado real de las pruebas (3 suites aprobadas al 100%, 1 con fallo por aserción estática frente a Google Sheets en vivo), confirmación del árbol de almacenamiento en `localStorage`, documentación del modelo de columnas A-O y verificación de las fórmulas financieras.
+- **Alcance:** Creación de la carpeta `./DOCUMENTACION/` y generación de los 6 documentos de referencia técnica iniciales.

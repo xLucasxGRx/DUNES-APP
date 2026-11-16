@@ -1,7 +1,8 @@
 # DUNES PARFUMS — Datos, Configuración y Ejecución
 
-> **Fecha del análisis:** 17 de octubre de 2026  
-> **Alcance revisado:** Modelos de datos en `localStorage`, estructura del CSV de Google Sheets, endpoints de integración externa, variables de configuración, comandos de ejecución y configuración de despliegue en GitHub Pages.
+> **Fecha del análisis:** 16 de noviembre de 2026  
+> **Versión de la aplicación:** v2.4 (PWA Offline / GitHub Pages)  
+> **Alcance revisado:** Modelos de datos en `localStorage`, estructura CSV de Google Sheets (columnas A-O), endpoints externos, variables de configuración, comandos de ejecución y despliegue.
 
 ---
 
@@ -29,7 +30,7 @@ Estructura de cada elemento almacenado en `dunes_cotizaciones_v1`:
 ```typescript
 interface ObjetoCotizacion {
   id: number;               // Timestamp generado por Date.now() (Identificador único)
-  fecha: string;            // Fecha legible formateada, ej: "17/10/2026 15:30"
+  fecha: string;            // Fecha legible formateada, ej: "16/11/2026 08:30"
   timestamp: number;        // Marca temporal numérica para ordenación
   producto: string;         // Nombre o descripción de la fragancia
   cantidad: number;         // Número de unidades a importar (>= 1)
@@ -77,28 +78,33 @@ El catálogo remoto publicado como CSV admite de 11 a 15 columnas. La aplicació
 
 | Columna | Índice | Nombre / Clave Normalizada | Tipo | Propósito |
 | :---: | :---: | :--- | :--- | :--- |
-| **A** | `0` | `producto`, `perfume`, `nombre` | `string` | Nombre del perfume o producto. |
-| **B** | `1` | `preciousa`, `precio_usa` | `number` | Precio de compra en EE.UU. (USD). |
-| **C** | `2` | `cantidad`, `cant`, `unidades` | `number` | Cantidad de unidades de referencia. |
-| **D** | `3` | `categoria`, `cat` | `string` | Categoría (`Diseñador`, `Árabes`). |
-| **E** | `4` | `genero`, `gender` | `string` | Género (`Hombre`, `Mujer`, `Unisex`). |
-| **F** | `5` | `pesokg`, `peso` | `number` | Peso en kilogramos. |
-| **G** | `6` | `fletexkg`, `fletekg` | `number` | Tarifa de flete aéreo por KG (USD). |
-| **H** | `7` | `reempaque` | `number` | Costo de reempaque courier (USD). |
-| **I** | `8` | `preciodolartc`, `tc` | `number` | Tipo de cambio en soles. |
-| **J** | `9` | `costoperu`, `costo_peru` | `number` | Costo unitario puesto en Perú (PEN). |
-| **K** | `10` | `precioventas`, `precioventa` | `number` | Precio de venta sugerido al público (PEN). |
-| **L** | `11` | `costosextras`, `extras` | `number` | Costos extras locales (delivery/cajas) (PEN). |
-| **M** | `12` | `ganancias`, `ganancia` | `number` | Ganancia neta calculada (PEN). |
-| **N** | `13` | `imagen`, `img`, `foto` | `string` | URL absoluta de la fotografía del perfume. |
-| **O** | `14` | `estadocatalogo`, `estado`, `status` | `string` | Disponibilidad comercial (`Disponible` vs `No disponible`). |
+| **A** | `0` | `producto`, `perfume`, `nombre` | `string` | Nombre del perfume o presentación comercial. |
+| **B** | `1` | `preciousa`, `precio_usa`, `preciounitariousa` | `number` | Precio de compra en EE.UU. (USD). |
+| **C** | `2` | `cantidad`, `cant`, `unidades` | `number` | Cantidad de unidades de referencia (por defecto 1). |
+| **D** | `3` | `categoria`, `cat`, `category` | `string` | Categoría comercial (`Diseñador`, `Árabes`). |
+| **E** | `4` | `genero`, `gender`, `sexo` | `string` | Clasificación de género (`Hombre`, `Mujer`, `Unisex`). |
+| **F** | `5` | `pesokg`, `peso`, `peso_kg` | `number` | Peso de la unidad en kilogramos (ej. `0.60`). |
+| **G** | `6` | `fletexkg`, `fletekg`, `flete_x_kg` | `number` | Tarifa de flete aéreo por KG en USD (ej. `9.50`). |
+| **H** | `7` | `reempaque` | `number` | Costo de reempaque courier en USD (ej. `1.00`). |
+| **I** | `8` | `preciodolartc`, `preciodolar`, `tc` | `number` | Tipo de cambio en soles (ej. `3.40`). |
+| **J** | `9` | `costoperu`, `costo_peru`, `costopuestoperu` | `number` | Costo unitario puesto en Perú en PEN. |
+| **K** | `10` | `precioventas`, `precioventa`, `precio_venta` | `number` | Precio de venta sugerido al público en PEN. |
+| **L** | `11` | `costosextras`, `costosextraslocales`, `extras` | `number` | Costos extras locales (delivery/cajas) en PEN. |
+| **M** | `12` | `ganancias`, `ganancia`, `ganancia_neta` | `number` | Ganancia neta calculada en PEN. |
+| **N** | `13` | `imagen`, `img`, `foto`, `image`, `urlimagen` | `string` | URL pública (`http`/`https`) de la miniatura de la fragancia. |
+| **O** | `14` | `estadocatalogo`, `estado_catalogo`, `status` | `string` | Disponibilidad (`Disponible` vs `No disponible` / `Agotado`). |
+
+#### Retrocompatibilidad Posicional:
+- **Estructura Oficial (15 columnas A-O):** Detecta Categoría (D) y Género (E).
+- **Estructura Compacta (14 columnas A-N):** Formato oficial sin columna O (asume disponible por defecto).
+- **Estructura Histórica (11 columnas A-K):** A=Producto, B=Precio USA, C=Cantidad, D=Peso, E=Flete, F=Reempaque, G=TC, H=Costo Perú, I=Venta, J=Extras, K=Ganancia.
 
 ---
 
 ## 2. Autenticación, Roles y Permisos
 
 - **Autenticación:** No existe sistema de inicio de sesión, contraseñas, tokens JWT ni cuentas de usuario.
-- **Roles y Permisos:** Todos los usuarios que acceden a la aplicación tienen el mismo nivel de acceso (usuario final con capacidades completas de cálculo, guardado local y configuración de sus propios valores base).
+- **Roles y Permisos:** Todos los usuarios operan con capacidades completas de cálculo, guardado local y personalización de sus parámetros.
 - **Protección de Datos:**
   - El catálogo de Google Sheets está publicado como recurso web de **solo lectura**. Nadie puede modificar la hoja desde la aplicación.
   - Las cotizaciones y configuraciones se guardan localmente en el navegador de cada usuario. No hay acceso cruzado entre dispositivos ni usuarios.
@@ -113,7 +119,7 @@ El catálogo remoto publicado como CSV admite de 11 a 15 columnas. La aplicació
    - Protocolo: HTTPS GET sin autenticación.
    - Parámetros añadidos: `_t=<timestamp>` para invalidar el almacenamiento en caché del proxy de Google.
 2. **Google Fonts CDN:**
-   - Tipografías: `Cinzel` (títulos de alta gama) y `Outfit` (números e interfaz limpia).
+   - Tipografías: `Cinzel` (títulos de lujo) y `Outfit` (números e interfaz limpia).
    - Enlace: `https://fonts.googleapis.com` con `preconnect`.
    - Si no hay conexión, el CSS recurre a la pila nativa del sistema (`-apple-system`, `BlinkMacSystemFont`, `Segoe UI`, `sans-serif`).
 3. **Web App Manifest & Service Worker API:**
@@ -135,7 +141,7 @@ El catálogo remoto publicado como CSV admite de 11 a 15 columnas. La aplicació
 ### 5.1. Requisitos del Sistema
 
 - **Para desarrollo y ejecución de pruebas:**
-  - Node.js versión `>= 18.0.0` (Probado y verificado en `Node v23.3.0`).
+  - Node.js versión `>= 18.0.0` (Probado en `Node v23.3.0`).
   - Python 3 con librería `Pillow` (Opcional, únicamente para ejecutar `scripts/generate_icons.py`).
 - **Para ejecutar la aplicación:**
   - Cualquier navegador moderno compatible con ES6 y Service Workers (Safari iOS 14+, Chrome 90+, Edge 90+, Firefox 90+).
@@ -143,48 +149,36 @@ El catálogo remoto publicado como CSV admite de 11 a 15 columnas. La aplicació
 
 ---
 
-### 5.2. Comandos Reales Verificados por Ejecución
-
-Todos los siguientes comandos fueron ejecutados y comprobados en este entorno:
+### 5.2. Comandos de Pruebas Automatizadas
 
 ```bash
 # 1. Ejecución de la suite matemática de importación (Fórmulas Excel)
-# Resultado comprobado: 11 casos exitosos, código de salida 0
+# Resultado: 11 casos exitosos, código de salida 0
 node tests/calculator.test.js
 
 # 2. Ejecución de la suite de validación de filtros y contadores de catálogo
-# Resultado comprobado: Todas las aserciones superadas, código de salida 0
+# Resultado: Todas las aserciones superadas, código de salida 0
 node tests/catalog-filters.test.js
 
 # 3. Ejecución de la suite de validación estática interna (IDs, inputs, fórmulas)
-# Resultado comprobado: 0 errores detectados, código de salida 0
+# Resultado: 46 IDs comprobados, 0 errores, código de salida 0
 node tests/validate-app.js
 
-# 4. Comprobación del estado del repositorio Git
-git status
+# 4. Prueba del parser CSV y Google Sheets en vivo
+# Nota: Conecta en vivo con Google Sheets. Caso 1 (parser) y Caso 3 (HTML) pasan al 100%.
+# Caso 2 arroja diferencia en el nombre de la primera fila debido a la reordenación de la hoja remota.
+node tests/sheets.test.js
 ```
 
 ---
 
-### 5.3. Comandos Documentados (Disponibles en el Código)
-
-Comandos presentes en los archivos del proyecto pero que dependen de servicios auxiliares:
+### 5.3. Servidor de Desarrollo Local
 
 ```bash
-# 5. Prueba de conexión y parser con Google Sheets
-# Nota: Conecta en vivo con Google Sheets. Actualmente arroja error en una aserción estática de nombre por cambio de orden remoto.
-node tests/sheets.test.js
-
-# 6. Prueba End-to-End con Edge Headless vía Chrome DevTools Protocol
-# Requiere levantar previamente un servidor en el puerto 8085
-node tests/cdp-desktop-test.js
-
-# 7. Regeneración de todos los iconos de la marca desde logosDP/logocotizador.jpeg
-python scripts/generate_icons.py
-
-# 8. Servidor de desarrollo local (cualquiera de las siguientes opciones)
+# Opción con npx (Node.js)
 npx serve .
-# o con Python:
+
+# Opción con Python 3
 python -m http.server 8085
 ```
 
@@ -195,11 +189,10 @@ python -m http.server 8085
 El proyecto está configurado para desplegarse de manera directa y gratuita en **GitHub Pages**:
 
 1. **Rutas Relativas Obligatorias:**  
-   Todos los enlaces a recursos en `index.html`, `style.css`, `manifest.json` y `service-worker.js` emplean `./` (rutas relativas) para garantizar compatibilidad con subdominios o subcarpetas de GitHub (`https://usuario.github.io/repositorio/`).
+   Todos los enlaces a recursos en `index.html`, `style.css`, `manifest.json` y `service-worker.js` emplean `./` (rutas relativas) para garantizar compatibilidad tanto en la raíz de un dominio como en subdirectorios de GitHub (`https://usuario.github.io/DUNES-APP/`).
 2. **Configuración de GitHub Pages:**
    - **Rama de origen:** `main`.
    - **Carpeta:** `/ (root)`.
-3. **Caché y Actualizaciones en Producción:**  
-   Para desplegar cambios de CSS o JS evitando que los navegadores mantengan versiones en caché obsoletas, se aplican dos técnicas:
+3. **Caché y Actualizaciones en Producción (v2.4):**  
    - Parámetro de versión en `index.html`: `<link rel="stylesheet" href="./style.css?v=2.4">` y `<script src="./app.js?v=2.4"></script>`.
    - Nombre de caché en `service-worker.js`: `const CACHE_NAME = 'dunes-parfums-v2.4';`.

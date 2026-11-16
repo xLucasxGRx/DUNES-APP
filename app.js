@@ -134,7 +134,11 @@ document.addEventListener('DOMContentLoaded', () => {
     emptyDesc: document.getElementById('catalogo-empty-desc'),
     btnSync: document.getElementById('btn-sincronizar-catalogo'),
     syncDot: document.getElementById('catalogo-sync-dot'),
-    syncText: document.getElementById('catalogo-sync-text')
+    syncText: document.getElementById('catalogo-sync-text'),
+    paginacion: document.getElementById('catalogo-paginacion'),
+    btnPagAnterior: document.getElementById('btn-pagina-anterior'),
+    btnPagSiguiente: document.getElementById('btn-pagina-siguiente'),
+    paginaInfo: document.getElementById('catalogo-pagina-info')
   };
 
   // Estado en memoria
@@ -147,6 +151,12 @@ document.addEventListener('DOMContentLoaded', () => {
   let filtroGeneroActivo = 'todos';
   let filtroEstadoActivo = 'todos';
   let vistaActiva = 'catalogo';
+
+  // Paginación del Catálogo (30 por página)
+  const ITEMS_POR_PAGINA = 30;
+  let paginaActualCatalogo = 1;
+  let productosFiltradosActuales = [];
+  let terminoBusquedaActual = '';
 
   // Optimizaciones de rendimiento del Catálogo (DOM, Normalización e Imágenes)
   const tarjetaDomCache = new Map();
@@ -1502,8 +1512,77 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  /**
+   * Actualiza el estado visual y los controles de paginación
+   */
+  function actualizarPaginacionUI(totalItems) {
+    if (!catalogoElements.paginacion) return;
+
+    const totalPaginas = Math.ceil(totalItems / ITEMS_POR_PAGINA) || 1;
+
+    // Validación de límites de página
+    if (paginaActualCatalogo > totalPaginas) {
+      paginaActualCatalogo = totalPaginas;
+    }
+    if (paginaActualCatalogo < 1) {
+      paginaActualCatalogo = 1;
+    }
+
+    // Regla 10: Cuando solamente exista una página de resultados o no haya resultados, ocultar la navegación
+    if (totalItems <= ITEMS_POR_PAGINA || totalItems === 0) {
+      catalogoElements.paginacion.style.display = 'none';
+      return;
+    }
+
+    catalogoElements.paginacion.style.display = 'flex';
+
+    if (catalogoElements.paginaInfo) {
+      catalogoElements.paginaInfo.textContent = `Página ${paginaActualCatalogo} de ${totalPaginas}`;
+    }
+
+    if (catalogoElements.btnPagAnterior) {
+      const deshabilitarAnterior = (paginaActualCatalogo <= 1);
+      catalogoElements.btnPagAnterior.disabled = deshabilitarAnterior;
+      catalogoElements.btnPagAnterior.setAttribute('aria-disabled', deshabilitarAnterior ? 'true' : 'false');
+    }
+
+    if (catalogoElements.btnPagSiguiente) {
+      const deshabilitarSiguiente = (paginaActualCatalogo >= totalPaginas);
+      catalogoElements.btnPagSiguiente.disabled = deshabilitarSiguiente;
+      catalogoElements.btnPagSiguiente.setAttribute('aria-disabled', deshabilitarSiguiente ? 'true' : 'false');
+    }
+  }
+
+  /**
+   * Desplaza la vista al inicio de la lista de resultados suavemente
+   */
+  function desplazarAlInicioResultados() {
+    if (catalogoElements.lista) {
+      catalogoElements.lista.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
+  /**
+   * Cambia la página activa del catálogo y actualiza la vista
+   */
+  function cambiarPaginaCatalogo(delta) {
+    const total = productosFiltradosActuales.length;
+    const totalPaginas = Math.ceil(total / ITEMS_POR_PAGINA) || 1;
+    const nuevaPagina = paginaActualCatalogo + delta;
+
+    if (nuevaPagina >= 1 && nuevaPagina <= totalPaginas && nuevaPagina !== paginaActualCatalogo) {
+      paginaActualCatalogo = nuevaPagina;
+      renderizarCatalogo(productosFiltradosActuales, terminoBusquedaActual);
+      desplazarAlInicioResultados();
+    }
+  }
+
   function renderizarCatalogo(productosParaMostrar, terminoBusqueda = '') {
     if (!catalogoElements.lista) return;
+
+    // Guardar referencia del conjunto filtrado actual
+    productosFiltradosActuales = productosParaMostrar;
+    terminoBusquedaActual = terminoBusqueda;
 
     const total = productosParaMostrar.length;
 
@@ -1520,6 +1599,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (total === 0) {
       catalogoElements.lista.replaceChildren();
       catalogoElements.empty.style.display = 'flex';
+      actualizarPaginacionUI(0);
       if (terminoBusqueda) {
         catalogoElements.emptyTitle.textContent = `No se encontraron perfumes para "${terminoBusqueda}"`;
         catalogoElements.emptyDesc.textContent = 'Intenta buscando por otra marca o nombre, o ajusta los filtros de categoría/género/estado.';
@@ -1535,12 +1615,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
     catalogoElements.empty.style.display = 'none';
 
+    // Regla: Paginación de 20 productos por página
+    const totalPaginas = Math.ceil(total / ITEMS_POR_PAGINA) || 1;
+    if (paginaActualCatalogo > totalPaginas) {
+      paginaActualCatalogo = totalPaginas;
+    }
+    if (paginaActualCatalogo < 1) {
+      paginaActualCatalogo = 1;
+    }
+
+    const inicio = (paginaActualCatalogo - 1) * ITEMS_POR_PAGINA;
+    const fin = inicio + ITEMS_POR_PAGINA;
+    const productosPagina = productosParaMostrar.slice(inicio, fin);
+
     // Reutilizar nodos DOM mediante DocumentFragment y replaceChildren para no destruir tarjetas existentes
+    // Renderiza ÚNICAMENTE los productos correspondientes a la página activa (máx 20)
     const fragment = document.createDocumentFragment();
-    for (let i = 0; i < total; i++) {
-      fragment.appendChild(obtenerElementoTarjeta(productosParaMostrar[i]));
+    for (let i = 0; i < productosPagina.length; i++) {
+      fragment.appendChild(obtenerElementoTarjeta(productosPagina[i]));
     }
     catalogoElements.lista.replaceChildren(fragment);
+
+    // Actualizar controles de paginación
+    actualizarPaginacionUI(total);
 
     // Activar carga progresiva (Lazy Loading) de las imágenes que necesitan descarga
     iniciarLazyLoadingCatalogo();
@@ -1645,7 +1742,10 @@ document.addEventListener('DOMContentLoaded', () => {
   /**
    * Filtrado en tiempo real con el Buscador y los Filtros de Categoría, Género y Estado
    */
-  function filtrarCatalogo() {
+  function filtrarCatalogo(resetearPagina = true) {
+    if (resetearPagina) {
+      paginaActualCatalogo = 1;
+    }
     const termino = catalogoElements.busqueda ? catalogoElements.busqueda.value.trim() : '';
 
     if (catalogoElements.btnLimpiar) {
@@ -1807,7 +1907,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (datosCambiaron) {
           if (hayFiltroActivo) {
-            filtrarCatalogo();
+            filtrarCatalogo(false);
           } else {
             renderizarCatalogo(catalogoProductos);
           }
@@ -1817,7 +1917,7 @@ document.addEventListener('DOMContentLoaded', () => {
           // No destruimos ni volvemos a renderizar tarjetas en pantalla para evitar saltos
           if (catalogoElements.lista && catalogoElements.lista.children.length === 0 && !catalogoElements.empty.style.display) {
             if (hayFiltroActivo) {
-              filtrarCatalogo();
+              filtrarCatalogo(false);
             } else {
               renderizarCatalogo(catalogoProductos);
             }
@@ -1883,6 +1983,19 @@ document.addEventListener('DOMContentLoaded', () => {
   if (catalogoElements.btnSync) {
     catalogoElements.btnSync.addEventListener('click', () => {
       cargarCatalogo(true);
+    });
+  }
+
+  // Navegación de Paginación del Catálogo
+  if (catalogoElements.btnPagAnterior) {
+    catalogoElements.btnPagAnterior.addEventListener('click', () => {
+      cambiarPaginaCatalogo(-1);
+    });
+  }
+
+  if (catalogoElements.btnPagSiguiente) {
+    catalogoElements.btnPagSiguiente.addEventListener('click', () => {
+      cambiarPaginaCatalogo(1);
     });
   }
 

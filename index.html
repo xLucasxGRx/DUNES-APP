@@ -26,7 +26,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="./style.css?v=2.4">
+  <link rel="stylesheet" href="./style.css?v=2.9">
 </head>
 <body>
 
@@ -401,6 +401,19 @@
             <!-- Inyectado por app.js -->
           </div>
 
+          <!-- Navegación de Paginación Compacta -->
+          <nav id="catalogo-paginacion" class="catalog-pagination-nav" aria-label="Paginación del catálogo" style="display: none;">
+            <button type="button" id="btn-pagina-anterior" class="btn-pagination" aria-label="Página anterior">
+              <span class="pagination-arrow" aria-hidden="true">‹</span>
+              <span class="pagination-text">Anterior</span>
+            </button>
+            <span id="catalogo-pagina-info" class="pagination-info" aria-live="polite">Página 1 de 1</span>
+            <button type="button" id="btn-pagina-siguiente" class="btn-pagination" aria-label="Página siguiente">
+              <span class="pagination-text">Siguiente</span>
+              <span class="pagination-arrow" aria-hidden="true">›</span>
+            </button>
+          </nav>
+
           <!-- Estado Vacío (Búsqueda sin resultados) -->
           <div id="catalogo-empty" class="catalog-empty-state" style="display: none;">
             <div class="empty-icon">🧴</div>
@@ -555,6 +568,6 @@
 
   <!-- Scripts -->
   <script src="./js/calculator.js"></script>
-  <script src="./app.js?v=2.4"></script>
+  <script src="./app.js?v=2.6"></script>
 </body>
 </html>
