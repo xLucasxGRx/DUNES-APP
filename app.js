@@ -231,6 +231,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  let cotizadorInicializado = false;
+
+  /**
+   * Asegura que los valores y cálculos iniciales del Cotizador estén listos.
+   * Se ejecuta al entrar a la pestaña o de forma diferida en idle.
+   */
+  function asegurarCotizadorInicializado() {
+    if (cotizadorInicializado) return;
+    cotizadorInicializado = true;
+    cargarValoresIniciales();
+    ejecutarCalculo();
+  }
+
   /**
    * Inicializa los campos de formulario según la regla de prioridad:
    * 1. Últimos valores usados
@@ -912,7 +925,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Acciones al cambiar a cada módulo
-    if (nombreTab === 'catalogo') {
+    if (nombreTab === 'cotizador') {
+      asegurarCotizadorInicializado();
+    } else if (nombreTab === 'catalogo') {
       if (catalogoProductos.length === 0) {
         cargarCatalogo(false);
       } else {
@@ -926,6 +941,17 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     } else if (nombreTab === 'cotizaciones') {
       renderizarHistorial();
+    }
+  }
+
+  /**
+   * Oculta suavemente la pantalla de bienvenida (Splash Screen)
+   * Se ejecuta tan pronto como el primer bloque de tarjetas está listo en el DOM.
+   */
+  function ocultarSplashScreen() {
+    const splash = document.getElementById('app-splash-screen');
+    if (splash && !splash.classList.contains('is-hidden')) {
+      splash.classList.add('is-hidden');
     }
   }
 
@@ -1491,7 +1517,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     for (let i = 0; i < baseProductos.length; i++) {
       const p = baseProductos[i];
-      const agot = p.esAgotado || (p.estadoCatalogo && p.estadoCatalogo.toLowerCase().includes('no disponible'));
+      const agot = p.esAgotado !== undefined ? p.esAgotado : (p.estadoCatalogo && p.estadoCatalogo.toLowerCase().includes('no disponible'));
       if (agot) {
         agotadosCount++;
       } else {
@@ -1610,6 +1636,7 @@ document.addEventListener('DOMContentLoaded', () => {
         catalogoElements.emptyTitle.textContent = 'Catálogo vacío';
         catalogoElements.emptyDesc.textContent = 'No hay filas en la hoja de Google Sheets.';
       }
+      ocultarSplashScreen();
       return;
     }
 
@@ -1641,6 +1668,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Activar carga progresiva (Lazy Loading) de las imágenes que necesitan descarga
     iniciarLazyLoadingCatalogo();
+
+    // Ocultar pantalla de bienvenida (Splash Screen) al completar el montaje en el DOM
+    ocultarSplashScreen();
   }
 
   /**
@@ -1834,8 +1864,10 @@ document.addEventListener('DOMContentLoaded', () => {
           const parsed = JSON.parse(cacheGuardada);
           if (Array.isArray(parsed) && parsed.length > 0) {
             catalogoProductos = parsed;
-            prepararCamposBusqueda(catalogoProductos);
+            // Renderizar de inmediato para pintar en menos de 50ms
             renderizarCatalogo(catalogoProductos);
+            // Preparar búsqueda de forma diferida en el siguiente tick
+            setTimeout(() => prepararCamposBusqueda(catalogoProductos), 0);
             const ultima = localStorage.getItem(STORAGE_KEYS.CATALOGO_LAST_SYNC) || 'Previa';
             if (catalogoElements.syncDot) catalogoElements.syncDot.className = 'sync-status-dot';
             if (catalogoElements.syncText) catalogoElements.syncText.textContent = `Sincronizado (${ultima})`;
@@ -1883,20 +1915,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const items = convertirFilasACatalogo(rows);
 
       if (items.length > 0) {
-        const cacheGuardada = localStorage.getItem(STORAGE_KEYS.CATALOGO_CACHE);
-        const nuevoJson = JSON.stringify(items);
-        const datosCambiaron = (nuevoJson !== cacheGuardada);
-
         catalogoProductos = items;
-        prepararCamposBusqueda(catalogoProductos);
-        podarCacheTarjetas(catalogoProductos);
-
-        localStorage.setItem(STORAGE_KEYS.CATALOGO_CACHE, nuevoJson);
-        const horaSync = new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
-        localStorage.setItem(STORAGE_KEYS.CATALOGO_LAST_SYNC, horaSync);
-
-        if (catalogoElements.syncDot) catalogoElements.syncDot.className = 'sync-status-dot';
-        if (catalogoElements.syncText) catalogoElements.syncText.textContent = `Sincronizado (${horaSync})`;
+        const nadaRenderizado = !catalogoElements.lista || catalogoElements.lista.children.length === 0;
 
         const hayFiltroActivo = Boolean(
           (catalogoElements.busqueda && catalogoElements.busqueda.value.trim() !== '') ||
@@ -1905,27 +1925,49 @@ document.addEventListener('DOMContentLoaded', () => {
           filtroEstadoActivo !== 'todos'
         );
 
-        if (datosCambiaron) {
+        // Si la pantalla aún no tiene tarjetas (usuario nuevo o primer render), pintar de inmediato
+        if (nadaRenderizado) {
           if (hayFiltroActivo) {
             filtrarCatalogo(false);
           } else {
             renderizarCatalogo(catalogoProductos);
           }
-          showToast(`Catálogo sincronizado: ${items.length} perfumes cargados`);
-        } else {
-          // Si los datos son idénticos a los ya renderizados desde el caché:
-          // No destruimos ni volvemos a renderizar tarjetas en pantalla para evitar saltos
-          if (catalogoElements.lista && catalogoElements.lista.children.length === 0 && !catalogoElements.empty.style.display) {
-            if (hayFiltroActivo) {
-              filtrarCatalogo(false);
-            } else {
-              renderizarCatalogo(catalogoProductos);
+        }
+
+        // Tareas secundarias en segundo plano (persistencia y preparación de búsqueda)
+        setTimeout(() => {
+          const cacheGuardada = localStorage.getItem(STORAGE_KEYS.CATALOGO_CACHE);
+          const nuevoJson = JSON.stringify(items);
+          const datosCambiaron = (nuevoJson !== cacheGuardada);
+
+          prepararCamposBusqueda(catalogoProductos);
+          podarCacheTarjetas(catalogoProductos);
+
+          if (datosCambiaron) {
+            localStorage.setItem(STORAGE_KEYS.CATALOGO_CACHE, nuevoJson);
+            const horaSync = new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+            localStorage.setItem(STORAGE_KEYS.CATALOGO_LAST_SYNC, horaSync);
+
+            if (catalogoElements.syncDot) catalogoElements.syncDot.className = 'sync-status-dot';
+            if (catalogoElements.syncText) catalogoElements.syncText.textContent = `Sincronizado (${horaSync})`;
+
+            if (!nadaRenderizado) {
+              if (hayFiltroActivo) {
+                filtrarCatalogo(false);
+              } else {
+                renderizarCatalogo(catalogoProductos);
+              }
+            }
+            showToast(`Catálogo sincronizado: ${items.length} perfumes cargados`);
+          } else {
+            const horaSync = localStorage.getItem(STORAGE_KEYS.CATALOGO_LAST_SYNC) || new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+            if (catalogoElements.syncDot) catalogoElements.syncDot.className = 'sync-status-dot';
+            if (catalogoElements.syncText) catalogoElements.syncText.textContent = `Sincronizado (${horaSync})`;
+            if (forzarRed) {
+              showToast(`Catálogo sincronizado: ${items.length} perfumes cargados`);
             }
           }
-          if (forzarRed) {
-            showToast(`Catálogo sincronizado: ${items.length} perfumes cargados`);
-          }
-        }
+        }, 0);
       } else {
         throw new Error('La hoja no contiene filas con datos');
       }
@@ -1936,12 +1978,14 @@ document.addEventListener('DOMContentLoaded', () => {
         prepararCamposBusqueda(catalogoProductos);
         renderizarCatalogo(catalogoProductos);
       }
+      ocultarSplashScreen();
       if (catalogoElements.syncDot) catalogoElements.syncDot.className = 'sync-status-dot is-offline';
       if (catalogoElements.syncText) catalogoElements.syncText.textContent = 'Modo local (Sin conexión a Sheets)';
       if (forzarRed) {
         showToast('No se pudo conectar a Google Sheets. Mostrando datos locales.', 'info');
       }
     } finally {
+      ocultarSplashScreen();
       if (catalogoElements.btnSync) catalogoElements.btnSync.classList.remove('is-spinning');
       catalogoCargando = false;
     }
@@ -2166,11 +2210,20 @@ document.addEventListener('DOMContentLoaded', () => {
   // ARRANQUE DE LA APLICACIÓN
   // Pantalla inicial predeterminada: Catálogo
   // ========================================================================
-  cargarValoresIniciales();
-  ejecutarCalculo();
-  renderizarHistorial();
-  cargarCatalogo(false);
   cambiarPestana('catalogo'); // Pantalla inicial garantizada: Catálogo
+  cargarCatalogo(false);
+
+  // Fallback de seguridad: ocultar splash screen tras 2.5s si la red demora o falla
+  setTimeout(ocultarSplashScreen, 2500);
+
+  // Inicialización diferida del Cotizador para no competir con el primer render del Catálogo
+  if ('requestIdleCallback' in window) {
+    window.requestIdleCallback(() => {
+      asegurarCotizadorInicializado();
+    });
+  } else {
+    setTimeout(asegurarCotizadorInicializado, 150);
+  }
 
   console.log('[DUNES PARFUMS] Inicializado. Módulo principal activo: Catálogo.');
 });
